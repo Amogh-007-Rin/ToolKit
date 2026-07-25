@@ -6,12 +6,20 @@
     "dev": "bun --bun next dev",
     "build": "bun --bun next build",
     "start": "bun --bun next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.9.0",
+    "@prisma/client": "^7.9.0",
+    "dotenv": "^17.4.2",
     "framer-motion": "^12.42.2",
     "next": "16.2.11",
     "next-auth": "^4.24.15",
+    "prisma": "^7.9.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },

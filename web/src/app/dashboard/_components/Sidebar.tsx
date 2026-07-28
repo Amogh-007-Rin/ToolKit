@@ -1,6 +1,6 @@
 export default function Sidebar() {
     return (
-        <div className="side-navigation w-[6%] h-full bg-[#333333] flex flex-col justify-center items-center p-2">
+        <div className="side-navigation w-[6%] h-full bg-[#1D1D1D] flex flex-col justify-center items-center p-2">
             <div className="part-1 w-[90%] h-[10%]">
 
             </div>

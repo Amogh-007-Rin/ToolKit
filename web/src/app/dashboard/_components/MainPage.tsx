@@ -9,7 +9,7 @@ export default function MainPage() {
         <div className="main-bar w-[93%] h-full">
             <div className="part-1 w-full h-[10%] flex items-center">
                 <div className="left-part w-[50%] h-full flex items-center p-5">
-                    <p className="text-2xl text-[#FFFFFF]">ALL TOOLS</p>
+                    <p className="text-2xl text-[#FFFFFF] tracking-wide">ALL TOOLS</p>
                 </div>
                 <div className="right-part w-[50%] h-full flex items-center justify-end px-3 gap-2">
                     <Multibutton tag="Add-tool-btn" label="List" onClick={checkLog} icon={List} iconColor="#FFFFFF" textClassName="text-white" />

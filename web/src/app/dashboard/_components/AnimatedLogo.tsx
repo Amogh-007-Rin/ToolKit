@@ -65,7 +65,7 @@ export default function AnimatedLogo() {
   return (
     <div
       ref={scope}
-      className="relative w-[42px] h-[42px] flex items-center justify-center cursor-pointer"
+      className="relative w-10.5 h-10.5 flex items-center justify-center cursor-pointer"
       onMouseEnter={handleHover}
     >
       <motion.div id="logo-icon" className="absolute">

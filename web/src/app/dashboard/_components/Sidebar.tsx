@@ -1,36 +1,55 @@
 'use client'
 
+import { useState } from "react";
 import { House, Kayak, LayoutDashboard, MessagesSquare, Settings, Spool } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import AnimatedLogo from "./AnimatedLogo";
 import Navbutton from "./buttons/Navbutton";
+import NotificationPanel from "./NotificationPanel";
 import Profilebutton from "@/components/ui/buttons/Profilebutton";
 import Notificationbutton from "@/components/ui/buttons/Notificationbutton";
 import SignoutButton from "@/components/ui/buttons/Signoutbutton";
 
-export default function Sidebar() {
-    
+const navItems = [
+  { icon: House, route: "/dashboard" },
+  { icon: LayoutDashboard, route: "/dashboard/tools" },
+  { icon: MessagesSquare, route: "/dashboard/messages" },
+  { icon: Kayak, route: "/dashboard/explore" },
+  { icon: Settings, route: "/dashboard/settings" },
+];
 
-    return (
-        <div className="side-navigation w-[6%] h-full bg-[#1D1D1D] flex flex-col justify-center items-center p-2">
-            <div className="part-1 w-[90%] h-[10%] flex items-center justify-center">
-                <Spool strokeWidth={1} color="#FFFFFF" size={42} />
-            </div>
-            <div className="part-2 w-[90%] h-[65%] flex flex-col items-center justify-center
-            gap-4">
-                <Navbutton tag="home-nav-button" icon={House} onClick={checkLog}/>
-                <Navbutton tag="home-nav-button" icon={LayoutDashboard} onClick={checkLog}/>
-                <Navbutton tag="home-nav-button" icon={MessagesSquare} onClick={checkLog}/>
-                <Navbutton tag="home-nav-button" icon={Kayak} onClick={checkLog}/>
-                <Navbutton tag="home-nav-button" icon={Settings} onClick={checkLog}/>
-            </div>
-            <div className="part-3 w-[90%] h-[25%] flex flex-col justify-center items-center gap-4">
-                <Notificationbutton onClick={checkLog}/>
-                <SignoutButton onClick={checkLog}/>
-                <Profilebutton onClick={checkLog}/>
-            </div>
-        </div>
-    );
+export default function Sidebar() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  return (
+    <div className="side-navigation w-[6%] h-full bg-[#1D1D1D] flex flex-col justify-center items-center p-2">
+      <div className="part-1 w-[90%] h-[10%] flex items-center justify-center">
+        <AnimatedLogo />
+      </div>
+      <div className="part-2 w-[90%] h-[65%] flex flex-col items-center justify-center gap-4">
+        {navItems.map((item) => (
+          <Navbutton
+            key={item.route}
+            tag="home-nav-button"
+            icon={item.icon}
+            onClick={() => router.push(item.route)}
+            isActive={pathname === item.route}
+            iconColor={pathname === item.route ? "#000000" : "#FFFFFF"}
+          />
+        ))}
+      </div>
+      <div className="part-3 w-[90%] h-[25%] flex flex-col justify-center items-center gap-4">
+        <Notificationbutton onClick={() => setShowNotifications(true)} />
+        <SignoutButton onClick={checkLog} />
+        <Profilebutton onClick={checkLog} />
+      </div>
+      <NotificationPanel isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+    </div>
+  );
 };
 
 function checkLog() {
-    alert("button clicked")
+  alert("button clicked")
 };

@@ -5,29 +5,29 @@ import AuthSignInButton from "@/components/ui/buttons/AuthSignInButton";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 
+const providers = [
+  { variant: "github" as const, provider: "github" },
+  { variant: "google" as const, provider: "google" },
+  { variant: "discord" as const, provider: "discord" },
+  { variant: "linkedin" as const, provider: "linkedin" },
+];
 
 function SignInContent() {
-
     const searchParams = useSearchParams();
-    const callbackUrl = searchParams.get("callbackUrl") || "/auth/signin"
+    const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
     return (
-        <div className="w-screen h-screen flex justify-center items-center bg-black">
-            <AuthSignInButton tag="githubAuthButton" iconSrc="/github.svg" className="w-14 h-14"
-                onClick={() => signIn("github", { callbackUrl })}
-            />
-            <AuthSignInButton tag="googlehubAuthButton" iconSrc="/google.svg" className="w-12 h-12"
-                onClick={() => signIn("google", { callbackUrl })}
-            />
-            <AuthSignInButton tag="discordAuthButton" iconSrc="/discord.svg" className="w-12 h-12"
-                onClick={() => signIn("discord", { callbackUrl })}
-            />
-            <AuthSignInButton tag="linkedInAuthButton" iconSrc="/linkedin.svg" className="w-10 h-10"
-                onClick={() => signIn("linkedin", { callbackUrl })}
-            />
+        <div className="w-screen h-screen flex justify-center items-center gap-6 bg-black">
+            {providers.map((p) => (
+                <AuthSignInButton
+                    key={p.provider}
+                    variant={p.variant}
+                    onClick={() => signIn(p.provider, { callbackUrl })}
+                />
+            ))}
         </div>
     );
-};
+}
 
 export default function SignInPage() {
     return (
@@ -35,4 +35,4 @@ export default function SignInPage() {
             <SignInContent />
         </Suspense>
     );
-};
+}

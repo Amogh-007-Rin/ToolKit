@@ -43,7 +43,7 @@ export default function Sidebar() {
       <div className="part-3 w-[90%] h-[25%] flex flex-col justify-center items-center gap-4">
         <Notificationbutton onClick={() => setShowNotifications(true)} />
         <SignoutButton onClick={checkLog} />
-        <Profilebutton onClick={checkLog} />
+        <Profilebutton onClick={() => router.push("/profile")} />
       </div>
       <NotificationPanel isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
     </div>

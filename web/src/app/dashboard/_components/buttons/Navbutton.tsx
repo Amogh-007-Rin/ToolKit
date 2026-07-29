@@ -1,3 +1,6 @@
+'use client'
+
+import { motion } from "framer-motion";
 import { type LucideIcon } from "lucide-react";
 
 interface NavbuttonProps {
@@ -6,16 +9,30 @@ interface NavbuttonProps {
     className?: string;
     onClick: () => void;
     iconColor?: string;
+    isActive?: boolean;
 };
 
-
-export default function Navbutton({ tag, icon, className, onClick, iconColor }: NavbuttonProps) {
-
+export default function Navbutton({ tag, icon, className, onClick, iconColor, isActive }: NavbuttonProps) {
     const Icon = icon;
 
     return (
-        <button className={`${tag ?? ""} w-[60%] h-[9%] rounded-2xl cursor-pointer bg-[#FFFFFF] flex items-center justify-center ${className ?? ""}`} onClick={onClick}>
-            {Icon ? <Icon color={iconColor} strokeWidth={2} size={20} /> : null}
-        </button>
+        <motion.button
+            layout
+            className={`${tag ?? ""} w-[60%] h-[9%] rounded-2xl cursor-pointer flex items-center justify-center relative ${className ?? ""}`}
+            onClick={onClick}
+        >
+            {isActive && (
+                <motion.div
+                    layoutId="nav-active-bg"
+                    className="absolute inset-0 rounded-2xl bg-[#FFFFFF]"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+            )}
+            {Icon ? (
+                <span className="relative z-10">
+                    <Icon color={iconColor} strokeWidth={2} size={20} />
+                </span>
+            ) : null}
+        </motion.button>
     );
 };

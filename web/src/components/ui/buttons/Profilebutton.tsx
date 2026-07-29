@@ -1,12 +1,17 @@
 import Image from "next/image";
 
-export default function Profilebutton() {
+interface ProfilebuttonProps{
+    onClick: () => void;
+}
+
+export default function Profilebutton({onClick}: ProfilebuttonProps) {
 
     const iconSrc = "/github.svg"
 
     return (
-        <button className="profile-btn w-14 h-14 rounded-full bg-black flex items-center justify-center">
-            <Image src={iconSrc} alt="" className="" width={36} height={36} preload={true} />
+        <button className="profile-btn w-12 h-14 rounded-2xl bg-black flex items-center justify-center overflow-hidden
+        cursor-pointer" onClick={onClick}>
+            <Image src={iconSrc} alt="" className="" width={24} height={24} preload={true} />
         </button>
     );
 

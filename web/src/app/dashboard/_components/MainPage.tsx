@@ -15,7 +15,7 @@ export default function MainPage() {
                     <Multibutton tag="Add-tool-btn" label="List" onClick={checkLog} icon={List} iconColor="#FFFFFF" textClassName="text-white" />
                     <Multibutton tag="Add-tool-btn" label="Board" onClick={checkLog} icon={Cuboid}
                         className="bg-[#FFFFFF]" />
-                    <Multibutton tag="Add-tool-btn" label="Workflows" onClick={checkLog} icon={Workflow} iconColor="#FFFFFF" textClassName="text-white"
+                    <Multibutton tag="Add-tool-btn" label="Add on" onClick={checkLog} icon={Workflow} iconColor="#FFFFFF" textClassName="text-white"
                     />
                     <Multibutton tag="Add-tool-btn" label="Add tools" onClick={checkLog} icon={Plus} iconColor="#FFFFFF"
                         className="bg-[#9D6FFF]" textClassName="text-white" />

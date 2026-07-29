@@ -12,7 +12,7 @@ export default function Sidebar() {
     return (
         <div className="side-navigation w-[6%] h-full bg-[#1D1D1D] flex flex-col justify-center items-center p-2">
             <div className="part-1 w-[90%] h-[10%] flex items-center justify-center">
-                <Spool strokeWidth={3} color="#FFFFFF" size={42} />
+                <Spool strokeWidth={1} color="#FFFFFF" size={42} />
             </div>
             <div className="part-2 w-[90%] h-[65%] flex flex-col items-center justify-center
             gap-4">
@@ -24,8 +24,8 @@ export default function Sidebar() {
             </div>
             <div className="part-3 w-[90%] h-[25%] flex flex-col justify-center items-center gap-4">
                 <Notificationbutton onClick={checkLog}/>
-                <SignoutButton/>
-                <Profilebutton/>
+                <SignoutButton onClick={checkLog}/>
+                <Profilebutton onClick={checkLog}/>
             </div>
         </div>
     );

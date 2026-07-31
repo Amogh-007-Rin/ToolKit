@@ -24,7 +24,7 @@ export default function Sidebar() {
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <div className="side-navigation w-[6%] h-full bg-[#1D1D1D] flex flex-col justify-center items-center p-2">
+    <div className="side-navigation w-[5%] h-full rounded-3xl bg-[#1D1D1D] flex flex-col justify-center items-center p-2">
       <div className="part-1 w-[90%] h-[10%] flex items-center justify-center">
         <AnimatedLogo />
       </div>

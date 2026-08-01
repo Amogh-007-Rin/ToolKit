@@ -9,13 +9,13 @@ function deriveKey(password: string, salt: string): Promise<Buffer> {
       else resolve(key);
     });
   });
-}
+};
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
   const derivedKey = await deriveKey(password, salt);
   return `${salt}:${derivedKey.toString("hex")}`;
-}
+};
 
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const [salt, hashHex] = stored.split(":");
@@ -24,4 +24,4 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const derivedKey = await deriveKey(password, salt);
   const expected = Buffer.from(hashHex, "hex");
   return derivedKey.length === expected.length && timingSafeEqual(derivedKey, expected);
-}
+};

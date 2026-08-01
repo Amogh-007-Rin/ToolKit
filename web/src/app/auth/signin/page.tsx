@@ -30,9 +30,51 @@ function SignInContent() {
         signIn(provider, { callbackUrl });
     };
 
+    const validateEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+    const credentialsSignIn = async (emailValue: string, passwordValue: string): Promise<string | null> => {
+        const csrfRes = await fetch("/api/auth/csrf");
+        if (!csrfRes.ok) throw new Error("Could not start sign in");
+        const { csrfToken } = await csrfRes.json();
+
+        const res = await fetch("/api/auth/callback/credentials", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                csrfToken,
+                email: emailValue,
+                password: passwordValue,
+                callbackUrl,
+                json: "true",
+            }),
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!data?.url) throw new Error("Unexpected sign in response");
+        const errorCode = new URL(data.url, window.location.origin).searchParams.get("error");
+        if (!res.ok || errorCode) return errorCode;
+        return null;
+    };
+
     const handleCreateAccount = async () => {
-        setIsLoading(true);
         setError(null);
+        if (!name.trim()) {
+            setError("Please enter your name");
+            return;
+        }
+        if (!email.trim()) {
+            setError("Please enter your email");
+            return;
+        }
+        if (!validateEmail(email)) {
+            setError("Please enter a valid email address");
+            return;
+        }
+        if (password.length < 6) {
+            setError("Password must be at least 6 characters");
+            return;
+        }
+        setIsLoading(true);
         try {
             const res = await fetch("/api/auth/register", {
                 method: "POST",
@@ -41,32 +83,48 @@ function SignInContent() {
             });
             if (!res.ok) {
                 const data = await res.json().catch(() => null);
-                setError(data?.error ?? "Registration failed");
+                if (res.status === 409) {
+                    setError("An account with this email already exists. Please sign in instead.");
+                } else {
+                    setError(data?.error ?? "Registration failed. Please try again.");
+                }
                 return;
             }
-            const result = await signIn("credentials", { email, password, redirect: false });
-            if (result?.error) {
-                setError("Could not sign you in after registration");
+            const errorCode = await credentialsSignIn(email, password);
+            if (errorCode) {
+                setError("Account created, but automatic sign in failed. Please sign in manually.");
+                setIsSignUp(false);
                 return;
             }
             router.push(callbackUrl);
+            router.refresh();
         } catch {
-            setError("Something went wrong");
+            setError("Something went wrong. Please try again.");
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleSignIn = async () => {
-        setIsLoading(true);
         setError(null);
-        const result = await signIn("credentials", { email, password, redirect: false });
-        setIsLoading(false);
-        if (result?.error) {
-            setError("Invalid email or password");
+        if (!email.trim() || !password) {
+            setError("Please enter your email and password");
             return;
         }
-        router.push(callbackUrl);
+        setIsLoading(true);
+        try {
+            const errorCode = await credentialsSignIn(email, password);
+            if (errorCode === "CredentialsSignin" || errorCode) {
+                setError("Invalid email or password");
+                return;
+            }
+            router.push(callbackUrl);
+            router.refresh();
+        } catch {
+            setError("Something went wrong. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

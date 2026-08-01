@@ -1,18 +1,31 @@
 'use client'
 
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
+
+const emptySubscribe = () => () => {};
 
 export default function ThemeToggleButton() {
-  const [isDark, setIsDark] = useState(true);
+  const { resolvedTheme, setTheme } = useTheme();
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const isDark = mounted ? resolvedTheme === "dark" : false;
+
+  const toggleTheme = () => {
+    setTheme(isDark ? "light" : "dark");
+  };
+
+  if (!mounted) {
+    return <div className="w-14 h-7 rounded-full bg-muted" aria-hidden />;
+  }
 
   return (
     <button
-      onClick={() => setIsDark(!isDark)}
-      className="relative w-14 h-7 rounded-full bg-[#1D1D1D] border border-[#2A2A2A] cursor-pointer transition-colors hover:border-[#3A3A3A]"
+      onClick={toggleTheme}
+      className="relative w-14 h-7 rounded-full bg-card border border-border cursor-pointer transition-colors hover:border-ring"
     >
       <motion.div
-        className={`absolute top-0.5 w-6 h-6 rounded-full flex items-center justify-center ${isDark ? "bg-white" : "bg-black"}`}
+        className={`absolute top-0.5 w-6 h-6 rounded-full flex items-center justify-center ${isDark ? "bg-foreground" : "bg-primary"}`}
         animate={{ x: isDark ? 28 : 4 }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
       >

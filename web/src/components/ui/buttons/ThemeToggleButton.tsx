@@ -12,7 +12,16 @@ export default function ThemeToggleButton() {
   const isDark = mounted ? resolvedTheme === "dark" : false;
 
   const toggleTheme = () => {
-    setTheme(isDark ? "light" : "dark");
+    const next = isDark ? "light" : "dark";
+    const update = () => {
+      setTheme(next);
+      document.documentElement.classList.toggle("dark", next === "dark");
+    };
+    if (document.startViewTransition) {
+      document.startViewTransition(update);
+    } else {
+      update();
+    }
   };
 
   if (!mounted) {

@@ -1,4 +1,5 @@
 import Sidebar from "./_components/Sidebar";
+import { CollectionsProvider } from "./_components/CollectionsProvider";
 
 export default function DashboardLayout({
   children,
@@ -9,7 +10,7 @@ export default function DashboardLayout({
     <div className="dashboard w-screen h-screen flex justify-between items-center bg-background p-4">
       <Sidebar />
       <div className="w-[94%] h-full">
-        {children}
+        <CollectionsProvider>{children}</CollectionsProvider>
       </div>
     </div>
   );

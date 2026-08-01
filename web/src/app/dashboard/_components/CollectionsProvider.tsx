@@ -11,6 +11,7 @@ interface CollectionsContextValue {
     updateCollection: (id: string, title: string, description: string) => Promise<void>;
     deleteCollection: (id: string) => Promise<void>;
     addTool: (collectionId: string, tool: Omit<Tool, "id">) => Promise<void>;
+    updateTool: (collectionId: string, toolId: string, tool: Omit<Tool, "id">) => Promise<void>;
     deleteTool: (collectionId: string, toolId: string) => Promise<void>;
 }
 
@@ -102,6 +103,27 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const updateTool = async (collectionId: string, toolId: string, tool: Omit<Tool, "id">) => {
+        try {
+            const res = await fetch(`/api/collections/${collectionId}/tools/${toolId}`, {
+                method: "PATCH",
+                headers: JSON_HEADERS,
+                body: JSON.stringify(tool),
+            });
+            if (!res.ok) throw new Error(`PATCH /api/collections/${collectionId}/tools/${toolId} failed: ${res.status}`);
+            const data = await res.json();
+            setCollections((prev) =>
+                prev.map((c) =>
+                    c.id === collectionId
+                        ? { ...c, tools: c.tools.map((t) => (t.id === toolId ? data.tool : t)) }
+                        : c
+                )
+            );
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     const deleteTool = async (collectionId: string, toolId: string) => {
         try {
             const res = await fetch(`/api/collections/${collectionId}/tools/${toolId}`, {
@@ -127,6 +149,7 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
                 updateCollection,
                 deleteCollection,
                 addTool,
+                updateTool,
                 deleteTool,
             }}
         >

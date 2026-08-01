@@ -3,20 +3,21 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { useCollections } from "../../_components/CollectionsProvider";
 import { TOOL_ICONS } from "../../_components/tool-icons";
 import AddToolCard from "../../_components/cards/AddToolCard";
 import ConfirmDeleteCard from "../../_components/cards/ConfirmDeleteCard";
+import ToolSearchbar from "../../_components/ToolSearchbar";
 import Image from "next/image";
 import type { Tool } from "@/types/collections";
-import ToolSearchbar from "../../_components/ToolSearchbar";
 
 export default function CollectionDetailPage() {
     const params = useParams<{ id: string }>();
     const router = useRouter();
-    const { collections, loading, addTool, deleteTool } = useCollections();
+    const { collections, loading, addTool, updateTool, deleteTool } = useCollections();
     const [isAddOpen, setIsAddOpen] = useState(false);
+    const [editingTool, setEditingTool] = useState<Tool | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Tool | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -52,6 +53,13 @@ export default function CollectionDetailPage() {
     const handleAddTool = (tool: Omit<Tool, "id">) => {
         addTool(collection.id, tool);
         setIsAddOpen(false);
+    };
+
+    const handleUpdateTool = (tool: Omit<Tool, "id">) => {
+        if (editingTool) {
+            updateTool(collection.id, editingTool.id, tool);
+        }
+        setEditingTool(null);
     };
 
     const handleConfirmDelete = () => {
@@ -151,15 +159,26 @@ export default function CollectionDetailPage() {
                                             )}
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDeleteTarget(tool);
-                                        }}
-                                        className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer shrink-0"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditingTool(tool);
+                                            }}
+                                            className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                                        >
+                                            <Pencil size={18} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDeleteTarget(tool);
+                                            }}
+                                            className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })}
@@ -170,6 +189,12 @@ export default function CollectionDetailPage() {
                 isOpen={isAddOpen}
                 onClose={() => setIsAddOpen(false)}
                 onSubmit={handleAddTool}
+            />
+            <AddToolCard
+                isOpen={editingTool !== null}
+                onClose={() => setEditingTool(null)}
+                onSubmit={handleUpdateTool}
+                initialTool={editingTool}
             />
             <ConfirmDeleteCard
                 isOpen={deleteTarget !== null}

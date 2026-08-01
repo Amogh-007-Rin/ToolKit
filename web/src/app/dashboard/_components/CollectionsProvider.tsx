@@ -156,10 +156,10 @@ export function CollectionsProvider({ children }: { children: ReactNode }) {
             {children}
         </CollectionsContext.Provider>
     );
-}
+};
 
 export function useCollections(): CollectionsContextValue {
     const ctx = useContext(CollectionsContext);
     if (!ctx) throw new Error("useCollections must be used within CollectionsProvider");
     return ctx;
-}
+};

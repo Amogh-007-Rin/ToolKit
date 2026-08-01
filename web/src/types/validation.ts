@@ -10,3 +10,17 @@ export const credentialsSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1),
 });
+
+export const collectionCreateSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(500).default(""),
+});
+
+export const collectionUpdateSchema = collectionCreateSchema;
+
+export const toolCreateSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  link: z.string().trim().max(500).optional(),
+  icon: z.string().trim().max(64).default("sparkles"),
+  logoUrl: z.string().trim().url().max(1000).nullable().optional(),
+});

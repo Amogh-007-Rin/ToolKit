@@ -24,17 +24,19 @@
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-theme-button-insider: var(--theme-button-insider);
 }
 
 :root {
-  --background: #fdfdfd;
+  --background: #f2f0ed;
   --foreground: #292d32;
   --card: #ffffff;
   --card-foreground: #292d32;
-  --sidebar: #f1f0ec;
+  --sidebar: #ffffff;
   --sidebar-foreground: #292d32;
   --muted: #f1f0ec;
   --muted-foreground: #6f6a87;
+  --theme-button-insider: #000000;
   --primary: #9d6ffe;
   --primary-foreground: #ffffff;
   --accent: #9d6ffe;
@@ -56,6 +58,7 @@
   --muted: #252525;
   --muted-foreground: #6f6a87;
   --primary: #9d6ffe;
+  --theme-button-insider: #000000;
   --primary-foreground: #ffffff;
   --accent: #9d6ffe;
   --accent-foreground: #ffffff;

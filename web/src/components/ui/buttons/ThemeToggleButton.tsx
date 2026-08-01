@@ -34,7 +34,7 @@ export default function ThemeToggleButton() {
       className="relative w-14 h-7 rounded-full bg-card border border-border cursor-pointer transition-colors hover:border-ring"
     >
       <motion.div
-        className={`absolute top-0.5 w-6 h-6 rounded-full flex items-center justify-center ${isDark ? "bg-foreground" : "bg-primary"}`}
+        className={`absolute top-0.5 w-6 h-6 rounded-full flex items-center justify-center ${isDark ? "bg-foreground" : "bg-theme-button-insider"}`}
         animate={{ x: isDark ? 28 : 4 }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
       >

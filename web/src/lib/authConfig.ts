@@ -7,8 +7,9 @@ import { PrismaAdapter } from "@/lib/prismaAdapter";
 import prisma from "@/db";
 import { verifyPassword } from "@/lib/password";
 import { credentialsSchema } from "@/types/validation";
+import type { AuthOptions } from "next-auth";
 
-export const NEXT_AUTH_CONFIG = {
+export const NEXT_AUTH_CONFIG: AuthOptions = {
     adapter: PrismaAdapter(),
     providers: [
         CredentialsProvider({
@@ -56,6 +57,20 @@ export const NEXT_AUTH_CONFIG = {
     ],
     session: {
         strategy: "jwt" as const,
+    },
+    callbacks: {
+        async jwt({ token, user }) {
+            if (user?.id) {
+                token.id = user.id;
+            }
+            return token;
+        },
+        async session({ session, token }) {
+            if (session.user) {
+                session.user.id = token.id as string;
+            }
+            return session;
+        },
     },
     pages: {
     signIn: "/auth/signin", // Your custom sign-in page route

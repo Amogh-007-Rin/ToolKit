@@ -18,6 +18,17 @@ export default function ToolsPage() {
     const [isCardOpen, setIsCardOpen] = useState(false);
     const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Collection | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const filteredCollections = collections.filter((c) => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) return true;
+        return (
+            c.title.toLowerCase().includes(query) ||
+            c.description.toLowerCase().includes(query) ||
+            c.tools.some((tool) => tool.name.toLowerCase().includes(query))
+        );
+    });
 
     const handleAddCollection = (title: string, description: string) => {
         addCollection(title, description);
@@ -50,21 +61,25 @@ export default function ToolsPage() {
                         className="bg-foreground" iconClassName="text-background" textClassName="text-background" />
                     <Multibutton tag="Add-tool-btn" label="Add on" onClick={checkLog} icon={Workflow}
                     />
-                    <Multibutton tag="Add-tool-btn" label="Add tools" onClick={() => setIsCardOpen(true)} icon={Plus}
+                    <Multibutton tag="Add-new-collection" label="collection" onClick={() => setIsCardOpen(true)} icon={Plus}
                         className="bg-primary" iconClassName="text-primary-foreground" textClassName="text-primary-foreground" />
                 </div>
             </div>
             <div className="part-2 w-full h-[10%] flex items-center justify-center">
-                <Searchbar />
+                <Searchbar value={searchQuery} onChange={setSearchQuery} />
             </div>
             <div className="part-3 w-full h-[80%] p-4 overflow-y-auto">
                 {collections.length === 0 ? (
                     <div className="w-full h-full flex items-center justify-center">
                         <p className="text-muted-foreground text-lg">No collections yet. Click &quot;Add tools&quot; to create one.</p>
                     </div>
+                ) : filteredCollections.length === 0 ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                        <p className="text-muted-foreground text-lg">No collections match &quot;{searchQuery.trim()}&quot;.</p>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {collections.map((c) => (
+                        {filteredCollections.map((c) => (
                             <div
                                 key={c.id}
                                 onClick={() => router.push(`/dashboard/tools/${c.id}`)}

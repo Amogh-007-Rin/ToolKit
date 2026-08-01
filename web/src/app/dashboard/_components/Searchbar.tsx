@@ -3,7 +3,12 @@
 import { Funnel, ListFilter, Search } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function Searchbar() {
+interface SearchbarProps {
+    value: string;
+    onChange: (value: string) => void;
+}
+
+export default function Searchbar({ value, onChange }: SearchbarProps) {
     return (
         <div className="searchbar w-[99%] h-[90%] bg-card rounded-2xl flex">
             <motion.div className="part-1 h-full w-[5%] flex items-center justify-center rounded-l-2xl"
@@ -17,7 +22,13 @@ export default function Searchbar() {
                     <Search size={32} className="text-foreground" />
                 </motion.div>
             </motion.div>
-            <input type="search" placeholder="Search Tools..." className="searchbar-input h-full w-[70%] bg-transparent focus:outline-none focus:ring-0 text-lg text-foreground placeholder:text-muted-foreground" />
+            <input
+                type="search"
+                placeholder="Search Tools..."
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="searchbar-input h-full w-[70%] bg-transparent focus:outline-none focus:ring-0 text-lg text-foreground placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:appearance-none [&::-ms-clear]:hidden"
+            />
             <div className="part-3 w-[25%] h-full rounded-r-2xl flex items-center justify-end px-2 py-1">
                 <button className="sort-by w-[25%] h-[90%] flex items-center justify-center
                 gap-1">

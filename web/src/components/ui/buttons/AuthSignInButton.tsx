@@ -6,7 +6,7 @@ import Image from "next/image";
 type AuthVariant = "github" | "google" | "discord" | "linkedin";
 
 const authConfig: Record<AuthVariant, { iconSrc: string; name: string; iconSize: number }> = {
-  github: { iconSrc: "/github.svg", name: "GitHub", iconSize: 48 },
+  github: { iconSrc: "/github.png", name: "GitHub", iconSize: 48 },
   google: { iconSrc: "/google.svg", name: "Google", iconSize: 40 },
   discord: { iconSrc: "/discord.svg", name: "Discord", iconSize: 40 },
   linkedin: { iconSrc: "/linkedin.svg", name: "LinkedIn", iconSize: 36 },

@@ -6,7 +6,7 @@ interface ProfilebuttonProps{
 
 export default function Profilebutton({onClick}: ProfilebuttonProps) {
 
-    const iconSrc = "/github.svg"
+    const iconSrc = "/github.png"
 
     return (
         <button className="profile-btn w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden

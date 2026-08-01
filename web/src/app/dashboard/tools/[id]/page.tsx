@@ -14,11 +14,19 @@ import type { Tool } from "@/types/collections";
 export default function CollectionDetailPage() {
     const params = useParams<{ id: string }>();
     const router = useRouter();
-    const { collections, addTool, deleteTool } = useCollections();
+    const { collections, loading, addTool, deleteTool } = useCollections();
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<Tool | null>(null);
 
-    const collection = collections.find((c) => c.id === Number(params.id));
+    const collection = collections.find((c) => c.id === params.id);
+
+    if (loading) {
+        return (
+            <div className="w-full h-full flex items-center justify-center">
+                <p className="text-muted-foreground text-sm">Loading…</p>
+            </div>
+        );
+    }
 
     if (!collection) {
         return (

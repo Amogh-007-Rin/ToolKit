@@ -1,13 +1,13 @@
 export interface Tool {
-    id: number;
+    id: string;
     name: string;
-    link: string;
+    link: string | null;
     icon: string;
     logoUrl: string | null;
 }
 
 export interface Collection {
-    id: number;
+    id: string;
     title: string;
     description: string;
     tools: Tool[];

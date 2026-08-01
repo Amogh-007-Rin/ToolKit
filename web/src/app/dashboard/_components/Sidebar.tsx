@@ -22,6 +22,36 @@ export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      const csrfRes = await fetch("/api/auth/csrf");
+      if (!csrfRes.ok) throw new Error("Could not start sign out");
+      const { csrfToken } = await csrfRes.json();
+
+      const res = await fetch("/api/auth/signout", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          csrfToken,
+          callbackUrl: "/",
+          json: "true",
+        }),
+      });
+      if (!res.ok) throw new Error("Sign out failed");
+
+      router.push("/");
+      router.refresh();
+    } catch {
+      router.push("/");
+      router.refresh();
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
 
   return (
     <div className="side-navigation w-[5%] h-full rounded-3xl bg-sidebar flex flex-col justify-center items-center p-2">
@@ -42,14 +72,10 @@ export default function Sidebar() {
       </div>
       <div className="part-3 w-[90%] h-[25%] flex flex-col justify-center items-center gap-4">
         <Notificationbutton onClick={() => setShowNotifications(true)} />
-        <SignoutButton onClick={checkLog} />
+        <SignoutButton onClick={handleSignOut} />
         <Profilebutton onClick={() => router.push("/profile")} />
       </div>
       <NotificationPanel isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
     </div>
   );
-};
-
-function checkLog() {
-  alert("button clicked")
 };

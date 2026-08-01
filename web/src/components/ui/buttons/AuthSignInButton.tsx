@@ -33,14 +33,14 @@ export default function AuthSignInButton({ variant, onClick }: AuthSignInButtonP
 
     return (
         <motion.button
-            className="w-16 h-16 bg-[#1D1D1D] hover:bg-[#0f0f11] border border-[#1C1C1F] rounded-full flex justify-center items-center"
+            className="w-16 h-16 bg-card hover:bg-muted border border-border rounded-full flex justify-center items-center"
             initial="rest"
             whileHover="hover"
             animate="rest"
             onClick={onClick}
         >
             <motion.div
-                className="w-full h-full bg-[#1D1D1D] hover:bg-[#0f0f11] rounded-full flex justify-center items-center"
+                className="w-full h-full bg-card hover:bg-muted rounded-full flex justify-center items-center"
                 variants={iconVariants}
             >
                 <Image src={config.iconSrc} alt={config.name} width={config.iconSize} height={config.iconSize} preload />

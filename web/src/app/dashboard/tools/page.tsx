@@ -9,16 +9,16 @@ export default function ToolsPage() {
         <div className="w-full h-full">
             <div className="part-1 w-full h-[10%] flex items-center">
                 <div className="left-part w-[50%] h-full flex items-center p-5">
-                    <p className="text-2xl text-[#FFFFFF] tracking-wide">ALL TOOLS</p>
+                    <p className="text-2xl text-foreground tracking-wide">ALL TOOLS</p>
                 </div>
                 <div className="right-part w-[50%] h-full flex items-center justify-end px-3 gap-2">
-                    <Multibutton tag="Add-tool-btn" label="List" onClick={checkLog} icon={List} iconColor="#FFFFFF" textClassName="text-white" />
+                    <Multibutton tag="Add-tool-btn" label="List" onClick={checkLog} icon={List} />
                     <Multibutton tag="Add-tool-btn" label="Board" onClick={checkLog} icon={Cuboid}
-                        className="bg-[#FFFFFF]" />
-                    <Multibutton tag="Add-tool-btn" label="Add on" onClick={checkLog} icon={Workflow} iconColor="#FFFFFF" textClassName="text-white"
+                        className="bg-foreground" iconClassName="text-background" textClassName="text-background" />
+                    <Multibutton tag="Add-tool-btn" label="Add on" onClick={checkLog} icon={Workflow}
                     />
-                    <Multibutton tag="Add-tool-btn" label="Add tools" onClick={checkLog} icon={Plus} iconColor="#FFFFFF"
-                        className="bg-[#9D6FFF]" textClassName="text-white" />
+                    <Multibutton tag="Add-tool-btn" label="Add tools" onClick={checkLog} icon={Plus}
+                        className="bg-primary" iconClassName="text-primary-foreground" textClassName="text-primary-foreground" />
                 </div>
             </div>
             <div className="part-2 w-full h-[10%] flex items-center justify-center">

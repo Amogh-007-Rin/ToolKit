@@ -7,20 +7,17 @@ interface MultibuttonProps {
     icon?: LucideIcon
     className?: string;
     onClick: () => void;
-    iconColor?: string;
+    iconClassName?: string;
     textClassName?: string;
 };
 
-export default function Multibutton({ tag, label, icon, className, onClick, iconColor, textClassName }: MultibuttonProps) {
+export default function Multibutton({ tag, label, icon, className, onClick, iconClassName, textClassName }: MultibuttonProps) {
     const Icon = icon;
 
     return (
-        <motion.button whileHover={{scale: 0.98}} className={`${tag ?? ""} w-[18%] h-[60%] bg-[#1D1D1D] rounded-2xl flex justify-center items-center gap-2.5 cursor-pointer ${className ?? ""}`} onClick={onClick}>
-            {Icon ? <Icon color={iconColor} size={20}/> : null}
+        <motion.button whileHover={{scale: 0.98}} className={`${tag ?? ""} w-[18%] h-[60%] bg-card rounded-2xl flex justify-center items-center gap-2.5 cursor-pointer ${className ?? ""}`} onClick={onClick}>
+            {Icon ? <Icon className={iconClassName ?? "text-foreground"} size={20}/> : null}
             <p className={textClassName}>{label}</p>
         </motion.button>
     );
 };
-
-
-

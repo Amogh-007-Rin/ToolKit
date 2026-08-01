@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from "react";
-import { House, Kayak, LayoutDashboard, MessagesSquare, Settings, Spool } from "lucide-react";
+import { House, Kayak, LayoutDashboard, MessagesSquare, Settings } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import AnimatedLogo from "./AnimatedLogo";
 import Navbutton from "./buttons/Navbutton";
@@ -24,7 +24,7 @@ export default function Sidebar() {
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <div className="side-navigation w-[5%] h-full rounded-3xl bg-[#1D1D1D] flex flex-col justify-center items-center p-2">
+    <div className="side-navigation w-[5%] h-full rounded-3xl bg-sidebar flex flex-col justify-center items-center p-2">
       <div className="part-1 w-[90%] h-[10%] flex items-center justify-center">
         <AnimatedLogo />
       </div>
@@ -36,7 +36,7 @@ export default function Sidebar() {
             icon={item.icon}
             onClick={() => router.push(item.route)}
             isActive={pathname === item.route}
-            iconColor={pathname === item.route ? "#000000" : "#FFFFFF"}
+            iconClassName={pathname === item.route ? "text-background" : "text-sidebar-foreground"}
           />
         ))}
       </div>

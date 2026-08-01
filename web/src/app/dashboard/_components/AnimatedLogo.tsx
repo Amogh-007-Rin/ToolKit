@@ -2,26 +2,24 @@
 
 import { motion, useAnimate } from "framer-motion";
 import { Spool } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
 const PARTICLE_COUNT = 80;
+
+const PARTICLES = Array.from({ length: PARTICLE_COUNT }, (_, i) => {
+  const angle = (Math.PI * 2 * i) / PARTICLE_COUNT + (Math.random() - 0.5) * 0.4;
+  const distance = 80 + Math.random() * 160;
+  return {
+    id: i,
+    x: Math.cos(angle) * distance,
+    y: Math.sin(angle) * distance,
+    size: 1.5 + Math.random() * 4,
+  };
+});
 
 export default function AnimatedLogo() {
   const [scope, animate] = useAnimate();
   const [isAnimating, setIsAnimating] = useState(false);
-
-  const particles = useRef(
-    Array.from({ length: PARTICLE_COUNT }, (_, i) => {
-      const angle = (Math.PI * 2 * i) / PARTICLE_COUNT + (Math.random() - 0.5) * 0.4;
-      const distance = 80 + Math.random() * 160;
-      return {
-        id: i,
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        size: 1.5 + Math.random() * 4,
-      };
-    })
-  );
 
   const handleHover = useCallback(async () => {
     if (isAnimating) return;
@@ -37,7 +35,7 @@ export default function AnimatedLogo() {
       opacity: [1, 1, 0],
     }, { duration: 0.4, ease: "easeIn" });
 
-    const particlePromises = particles.current.map((p) =>
+    const particlePromises = PARTICLES.map((p) =>
       animate(`#particle-${p.id}`, {
         x: p.x,
         y: p.y,
@@ -48,7 +46,7 @@ export default function AnimatedLogo() {
 
     await Promise.all(particlePromises);
 
-    particles.current.forEach((p) => {
+    PARTICLES.forEach((p) => {
       animate(`#particle-${p.id}`, { x: 0, y: 0, opacity: 0, scale: 0 }, { duration: 0.01 });
     });
 
@@ -69,13 +67,13 @@ export default function AnimatedLogo() {
       onMouseEnter={handleHover}
     >
       <motion.div id="logo-icon" className="absolute">
-        <Spool strokeWidth={1} color="#FFFFFF" size={42} />
+        <Spool strokeWidth={1} className="text-foreground" size={42} />
       </motion.div>
-      {particles.current.map((p) => (
+      {PARTICLES.map((p) => (
         <motion.div
           key={p.id}
           id={`particle-${p.id}`}
-          className="absolute rounded-full bg-white"
+          className="absolute rounded-full bg-foreground"
           style={{ width: p.size, height: p.size }}
           initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
         />

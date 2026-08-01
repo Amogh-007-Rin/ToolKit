@@ -6,7 +6,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="dashboard w-screen h-screen flex justify-between items-center bg-black p-4">
+    <div className="dashboard w-screen h-screen flex justify-between items-center bg-background p-4">
       <Sidebar />
       <div className="w-[94%] h-full">
         {children}

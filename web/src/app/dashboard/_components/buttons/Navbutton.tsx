@@ -8,11 +8,11 @@ interface NavbuttonProps {
     icon?: LucideIcon
     className?: string;
     onClick: () => void;
-    iconColor?: string;
+    iconClassName?: string;
     isActive?: boolean;
 };
 
-export default function Navbutton({ tag, icon, className, onClick, iconColor, isActive }: NavbuttonProps) {
+export default function Navbutton({ tag, icon, className, onClick, iconClassName, isActive }: NavbuttonProps) {
     const Icon = icon;
 
     return (
@@ -24,13 +24,13 @@ export default function Navbutton({ tag, icon, className, onClick, iconColor, is
             {isActive && (
                 <motion.div
                     layoutId="nav-active-bg"
-                    className="absolute inset-0 rounded-2xl bg-[#FFFFFF]"
+                    className="absolute inset-0 rounded-2xl bg-foreground"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                 />
             )}
             {Icon ? (
                 <span className="relative z-10">
-                    <Icon color={iconColor} strokeWidth={2} size={20} />
+                    <Icon className={iconClassName ?? (isActive ? "text-background" : "text-foreground")} strokeWidth={2} size={20} />
                 </span>
             ) : null}
         </motion.button>

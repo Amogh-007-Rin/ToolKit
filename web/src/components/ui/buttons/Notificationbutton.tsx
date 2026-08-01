@@ -31,7 +31,7 @@ export default function Notificationbutton({ onClick }: NotificationbuttonProps)
             onClick={onClick}>
             {/* 5. Apply the variants to the motion component */}
             <motion.div variants={iconVariants}>
-                <Bell color="white" />
+                <Bell className="text-foreground" />
             </motion.div>
         </motion.button>
     );

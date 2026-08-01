@@ -75,7 +75,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
               }}
             >
               <motion.div
-                className="relative bg-[#252525] shadow-2xl overflow-hidden"
+                className="relative bg-card shadow-2xl overflow-hidden"
                 style={{ filter: "url(#slime-goo)" }}
                 animate={{
                   borderRadius: isExpanding ? "0px" : "0 0 24px 24px",
@@ -105,7 +105,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                 {!isExpanding && DROPLETS.map((d, i) => (
                   <motion.div
                     key={i}
-                    className="absolute w-6 h-6 rounded-full bg-[#252525]"
+                    className="absolute w-6 h-6 rounded-full bg-card"
                     style={{
                       top: -12,
                       left: "50%",
@@ -126,7 +126,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                     <motion.h2
                       animate={{ scale: isExpanding ? 1.15 : 1, x: isExpanding ? 8 : 0 }}
                       transition={{ duration: 0.3 }}
-                      className="text-xl text-white font-semibold"
+                      className="text-xl text-foreground font-semibold"
                     >
                       Notifications
                     </motion.h2>
@@ -137,7 +137,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleViewAll}
-                        className="text-sm text-gray-400 hover:text-[#9D6FFF] transition-colors pointer-events-auto"
+                        className="text-sm text-muted-foreground hover:text-primary transition-colors pointer-events-auto"
                       >
                         View all
                       </motion.button>
@@ -146,7 +146,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                         transition={{ duration: 0.15 }}
                         whileHover={{ rotate: 90 }}
                         onClick={onClose}
-                        className="text-gray-400 hover:text-white transition-colors pointer-events-auto"
+                        className="text-muted-foreground hover:text-foreground transition-colors pointer-events-auto"
                       >
                         <X size={20} />
                       </motion.button>
@@ -157,7 +157,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                     transition={{ duration: 0.15 }}
                     className="space-y-3 max-h-[280px] overflow-hidden"
                   >
-                    <p className="text-gray-500 text-center py-8">No new notifications</p>
+                    <p className="text-muted-foreground text-center py-8">No new notifications</p>
                   </motion.div>
                 </div>
               </motion.div>

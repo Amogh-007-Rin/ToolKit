@@ -6,6 +6,7 @@ import DiscordProvider  from "next-auth/providers/discord";
 import { PrismaAdapter } from "@/lib/prismaAdapter";
 import prisma from "@/db";
 import { verifyPassword } from "@/lib/password";
+import { credentialsSchema } from "@/types/validation";
 
 export const NEXT_AUTH_CONFIG = {
     adapter: PrismaAdapter(),
@@ -17,11 +18,11 @@ export const NEXT_AUTH_CONFIG = {
                 password: { label: 'password', type: 'password', placeholder: '' },
             },
             async authorize(credentials) {
-                const email = credentials?.email as string | undefined;
-                const password = credentials?.password as string | undefined;
-                if (!email || !password) return null;
+                const parsed = credentialsSchema.safeParse(credentials);
+                if (!parsed.success) return null;
+                const { email, password } = parsed.data;
 
-                const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+                const user = await prisma.user.findUnique({ where: { email } });
                 if (!user?.password) return null;
 
                 const isValid = await verifyPassword(password, user.password);

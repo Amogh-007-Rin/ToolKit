@@ -155,7 +155,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                   <motion.div
                     animate={{ opacity: isExpanding ? 0 : 1 }}
                     transition={{ duration: 0.15 }}
-                    className="space-y-3 max-h-[280px] overflow-hidden"
+                    className="space-y-3 max-h-70 overflow-hidden"
                   >
                     <p className="text-muted-foreground text-center py-8">No new notifications</p>
                   </motion.div>

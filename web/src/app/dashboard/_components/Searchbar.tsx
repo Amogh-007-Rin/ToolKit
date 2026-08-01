@@ -10,7 +10,7 @@ interface SearchbarProps {
 
 export default function Searchbar({ value, onChange }: SearchbarProps) {
     return (
-        <div className="searchbar w-[99%] h-[90%] bg-card rounded-2xl flex">
+        <div className="searchbar w-[98%] h-[80%] bg-card rounded-2xl flex">
             <motion.div className="part-1 h-full w-[5%] flex items-center justify-center rounded-l-2xl"
                 whileHover="hover">
                 <motion.div className="w-full h-full flex items-center justify-center" variants={{

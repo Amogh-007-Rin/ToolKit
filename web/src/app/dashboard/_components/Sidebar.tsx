@@ -58,7 +58,7 @@ export default function Sidebar() {
       <div className="part-1 w-[90%] h-[10%] flex items-center justify-center">
         <AnimatedLogo />
       </div>
-      <div className="part-2 w-[90%] h-[65%] flex flex-col items-center justify-center gap-4">
+      <div className="part-2 w-[95%] h-[65%] flex flex-col items-center justify-center gap-4">
         {navItems.map((item) => (
           <Navbutton
             key={item.route}

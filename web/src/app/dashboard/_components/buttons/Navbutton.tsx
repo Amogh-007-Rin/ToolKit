@@ -18,7 +18,7 @@ export default function Navbutton({ tag, icon, className, onClick, iconClassName
     return (
         <motion.button
             layout
-            className={`${tag ?? ""} w-[60%] h-[9%] rounded-2xl cursor-pointer flex items-center justify-center relative ${className ?? ""}`}
+            className={`${tag ?? ""} w-[70%] h-[9%] rounded-2xl cursor-pointer flex items-center justify-center relative ${className ?? ""}`}
             onClick={onClick}
         >
             {isActive && (

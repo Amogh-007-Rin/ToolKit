@@ -10,6 +10,7 @@ import AddToolCard from "../../_components/cards/AddToolCard";
 import ConfirmDeleteCard from "../../_components/cards/ConfirmDeleteCard";
 import Image from "next/image";
 import type { Tool } from "@/types/collections";
+import ToolSearchbar from "../../_components/ToolSearchbar";
 
 export default function CollectionDetailPage() {
     const params = useParams<{ id: string }>();
@@ -17,8 +18,14 @@ export default function CollectionDetailPage() {
     const { collections, loading, addTool, deleteTool } = useCollections();
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<Tool | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const collection = collections.find((c) => c.id === params.id);
+    const filteredTools = (collection?.tools ?? []).filter((tool) => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) return true;
+        return tool.name.toLowerCase().includes(query);
+    });
 
     if (loading) {
         return (
@@ -83,12 +90,17 @@ export default function CollectionDetailPage() {
                     </motion.button>
                 </div>
             </div>
-            <div className="part-2 w-full h-[10%] flex items-center justify-center">
-                <div className="w-full px-5 flex items-center gap-3">
+            <div className="part-2 w-full h-[10%] flex items-center justify-center gap-4 px-5">
+                <div className="flex items-center gap-3 shrink-0">
                     <p className="text-lg text-foreground font-semibold">Tools</p>
                     <span className="text-sm text-muted-foreground">
                         {collection.tools.length} {collection.tools.length === 1 ? "tool" : "tools"}
                     </span>
+                </div>
+                <div className="flex-1 h-full flex items-center justify-end">
+                    <div className="w-[60%] h-full flex items-center">
+                        <ToolSearchbar value={searchQuery} onChange={setSearchQuery} />
+                    </div>
                 </div>
             </div>
             <div className="part-3 w-full h-[80%] p-4 overflow-y-auto">
@@ -98,9 +110,15 @@ export default function CollectionDetailPage() {
                             No tools yet. Click &quot;Add tools&quot; to add your first tool.
                         </p>
                     </div>
+                ) : filteredTools.length === 0 ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                        <p className="text-muted-foreground text-lg">
+                            No tools match &quot;{searchQuery.trim()}&quot;.
+                        </p>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {collection.tools.map((tool) => {
+                        {filteredTools.map((tool) => {
                             const Icon = TOOL_ICONS[tool.icon] ?? TOOL_ICONS.sparkles;
                             return (
                                 <div

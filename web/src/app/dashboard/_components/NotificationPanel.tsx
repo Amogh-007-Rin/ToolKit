@@ -137,7 +137,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleViewAll}
-                        className="text-sm text-muted-foreground hover:text-primary transition-colors pointer-events-auto"
+                        className="text-sm text-muted-foreground hover:text-theme-button-insider transition-colors pointer-events-auto"
                       >
                         View all
                       </motion.button>

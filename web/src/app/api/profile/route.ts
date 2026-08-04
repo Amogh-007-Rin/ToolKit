@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { profileUpdateSchema } from "@/types/validation";
+import { Prisma } from "../../../../generated/prisma/client";
 
 export async function GET() {
   const userId = await getSessionUserId();
@@ -20,6 +21,7 @@ export async function GET() {
       role: true,
       location: true,
       skills: true,
+      tag: true,
     },
   });
 
@@ -44,28 +46,43 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const { name, bio, role, location, skills } = parsed.data;
+  const { name, bio, role, location, skills, tag } = parsed.data;
 
-  const user = await prisma.user.update({
-    where: { id: userId },
-    data: {
-      name,
-      bio: bio || null,
-      role: role || null,
-      location: location || null,
-      skills: skills,
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      image: true,
-      bio: true,
-      role: true,
-      location: true,
-      skills: true,
-    },
-  });
+  try {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name,
+        bio: bio || null,
+        role: role || null,
+        location: location || null,
+        skills: skills,
+        tag: tag?.trim() || null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        bio: true,
+        role: true,
+        location: true,
+        skills: true,
+        tag: true,
+      },
+    });
 
-  return NextResponse.json({ user });
+    return NextResponse.json({ user });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "This toolkit tag is already taken" },
+        { status: 409 }
+      );
+    }
+    throw error;
+  }
 }

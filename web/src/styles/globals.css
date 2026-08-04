@@ -25,6 +25,7 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-theme-button-insider: var(--theme-button-insider);
+  --color-shade-background: var(--shade-background);
 }
 
 :root {
@@ -46,6 +47,7 @@
   --ring: #9d6ffe;
   --destructive: #f4696a;
   --destructive-foreground: #ffffff;
+  --shade-background: #dedede77;
 }
 
 .dark {
@@ -67,6 +69,7 @@
   --ring: #9d6ffe;
   --destructive: #ff6b6b;
   --destructive-foreground: #ffffff;
+  --shade-background:#1d1d1d;
 }
 
 body {

@@ -4,7 +4,7 @@ import { useState, ChangeEvent } from "react";
 import Image from "next/image";
 import { ImageIcon } from "lucide-react";
 
-export default function ImageUploader() {
+export default function BannerUploader() {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {

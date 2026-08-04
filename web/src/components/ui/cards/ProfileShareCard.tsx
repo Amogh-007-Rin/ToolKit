@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, QrCode, X } from "lucide-react";
 import Image from "next/image";
+import QRCode from "qrcode";
 
 interface ProfileShareCardProps {
   isOpen: boolean;
@@ -25,21 +26,15 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
   useEffect(() => {
     if (!isOpen || !profileUrl || generatedRef.current) return;
     generatedRef.current = true;
+    setQrDataUrl(null);
+    setQrError(false);
 
-    import("qrcode")
-      .then((QRCode) => {
-        QRCode.toDataURL(
-          profileUrl,
-          { width: 240, margin: 1, color: { dark: "#292d32", light: "#ffffff" } },
-          (err, url) => {
-            if (err) {
-              setQrError(true);
-            } else {
-              setQrDataUrl(url);
-            }
-          }
-        );
-      })
+    QRCode.toDataURL(profileUrl, {
+      width: 240,
+      margin: 1,
+      color: { dark: "#292d32", light: "#ffffff" },
+    })
+      .then((url: string) => setQrDataUrl(url))
       .catch(() => setQrError(true));
 
     return () => {
@@ -60,8 +55,6 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  if (!tag) return null;
 
   return (
     <AnimatePresence>
@@ -96,6 +89,16 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
               </div>
 
               <div className="flex flex-col items-center gap-6 p-8">
+                {!tag ? (
+                  <div className="flex flex-col items-center gap-3 py-8">
+                    <QrCode size={48} className="text-muted-foreground" />
+                    <p className="text-foreground font-medium text-sm">No toolkit tag set</p>
+                    <p className="text-muted-foreground text-xs text-center max-w-xs">
+                      Set a unique tag in your Edit Profile settings to generate a shareable QR code and link.
+                    </p>
+                  </div>
+                ) : (
+                  <>
                 <div className="w-60 h-60 rounded-2xl bg-white border border-border flex items-center justify-center overflow-hidden">
                   {qrDataUrl ? (
                     <Image src={qrDataUrl} alt="Profile QR Code" width={240} height={240} className="w-full h-full p-2" unoptimized />
@@ -147,6 +150,8 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
                     </div>
                   </div>
                 </div>
+                </>
+                )}
               </div>
             </motion.div>
           </div>

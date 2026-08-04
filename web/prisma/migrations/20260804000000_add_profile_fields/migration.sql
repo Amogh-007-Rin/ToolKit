@@ -1,0 +1,6 @@
+ALTER TABLE "User" ADD COLUMN "bio" TEXT;
+ALTER TABLE "User" ADD COLUMN "location" TEXT;
+ALTER TABLE "User" ADD COLUMN "role" TEXT;
+ALTER TABLE "User" ADD COLUMN "skills" TEXT[] DEFAULT ARRAY[]::TEXT[];
+
+UPDATE "User" SET "skills" = ARRAY[]::TEXT[] WHERE "skills" IS NULL;

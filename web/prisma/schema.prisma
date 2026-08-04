@@ -14,6 +14,10 @@ model User {
   image         String?
   emailVerified DateTime?
   password      String?
+  bio           String?
+  location      String?
+  role          String?
+  skills        String[]
   accounts      Account[]
   sessions      Session[]
   collections   Collection[]

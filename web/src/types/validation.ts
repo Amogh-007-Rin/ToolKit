@@ -31,4 +31,12 @@ export const profileUpdateSchema = z.object({
   role: z.string().trim().max(200).default(""),
   location: z.string().trim().max(200).default(""),
   skills: z.array(z.string().trim().min(1).max(50)).max(20).default([]),
+  tag: z
+    .string()
+    .trim()
+    .min(3)
+    .max(30)
+    .regex(/^[a-zA-Z0-9_-]+$/, "Tag can only contain letters, numbers, hyphens, and underscores")
+    .optional()
+    .nullable(),
 });

@@ -13,7 +13,7 @@ interface ProfileShareCardProps {
 }
 
 export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareCardProps) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"tag" | "link" | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrError, setQrError] = useState(false);
   const generatedRef = useRef(false);
@@ -45,15 +45,15 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
   const handleCopyTag = async () => {
     if (!tag) return;
     await navigator.clipboard.writeText(tag);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopied("tag");
+    setTimeout(() => setCopied(null), 2000);
   };
 
   const handleCopyLink = async () => {
     if (!profileUrl) return;
     await navigator.clipboard.writeText(profileUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopied("link");
+    setTimeout(() => setCopied(null), 2000);
   };
 
   return (
@@ -128,7 +128,7 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
                         onClick={handleCopyTag}
                         className="w-10 h-10 bg-primary text-primary-foreground rounded-xl flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors shrink-0"
                       >
-                        {copied ? <Check size={18} /> : <Copy size={18} />}
+                        {copied === "tag" ? <Check size={18} /> : <Copy size={18} />}
                       </motion.button>
                     </div>
                   </div>
@@ -145,7 +145,7 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
                         onClick={handleCopyLink}
                         className="w-10 h-10 bg-primary text-primary-foreground rounded-xl flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors shrink-0"
                       >
-                        {copied ? <Check size={18} /> : <Copy size={18} />}
+                        {copied === "link" ? <Check size={18} /> : <Copy size={18} />}
                       </motion.button>
                     </div>
                   </div>

@@ -10,6 +10,7 @@ interface ProfileData {
   role: string;
   location: string;
   skills: string[];
+  tag: string | null;
 }
 
 interface EditProfileCardProps {
@@ -25,6 +26,7 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
   const [role, setRole] = useState(initialData.role);
   const [location, setLocation] = useState(initialData.location);
   const [skills, setSkills] = useState<string[]>(initialData.skills);
+  const [tag, setTag] = useState(initialData.tag ?? "");
   const [skillInput, setSkillInput] = useState("");
 
   const handleSave = () => {
@@ -36,6 +38,7 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
       role: role.trim(),
       location: location.trim(),
       skills: skills.filter((s) => s.trim().length > 0),
+      tag: tag.trim() || null,
     });
   };
 
@@ -165,7 +168,20 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
                           </button>
                         </span>
                       ))}
-                    </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm text-muted-foreground font-medium">Toolkit Tag</label>
+                  <input
+                    type="text"
+                    placeholder="your-unique-tag (letters, numbers, hyphens)"
+                    value={tag}
+                    onChange={(e) => setTag(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
+                    className="w-full h-12 bg-input border border-border rounded-xl px-4 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Your tag will be used to create a shareable profile link: toolkit.app/profile/{tag || "..."}
+                  </p>
+                </div>
+              </div>
                   )}
                 </div>
               </div>

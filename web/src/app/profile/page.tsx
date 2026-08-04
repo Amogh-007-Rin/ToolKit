@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import Multibutton from "../dashboard/_components/buttons/Multibutton";
 import SkillTag from "@/components/ui/tags/SkillTag";
 import EditProfileCard from "./EditProfileCard";
+import ProfileShareCard from "@/components/ui/cards/ProfileShareCard";
 
 interface ProfileData {
   name: string;
@@ -15,11 +16,13 @@ interface ProfileData {
   role: string;
   location: string;
   skills: string[];
+  tag: string | null;
 }
 
 export default function ProfilePage() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData>({
     name: "",
@@ -27,6 +30,7 @@ export default function ProfilePage() {
     role: "",
     location: "",
     skills: [],
+    tag: null,
   });
 
   useEffect(() => {
@@ -42,6 +46,7 @@ export default function ProfilePage() {
             role: data.user.role ?? "",
             location: data.user.location ?? "",
             skills: data.user.skills ?? [],
+            tag: data.user.tag ?? null,
           });
         }
       } catch {
@@ -136,7 +141,7 @@ export default function ProfilePage() {
               <Multibutton
                 tag="share-profile"
                 label="Share Profile"
-                onClick={() => {}}
+                onClick={() => setIsSharing(true)}
                 className="absolute left-65 w-[25%] h-[30%] rounded-4xl bg-foreground text-card"
               />
             </div>
@@ -158,6 +163,12 @@ export default function ProfilePage() {
         initialData={profile}
         onClose={() => setIsEditing(false)}
         onSubmit={handleEditSubmit}
+      />
+
+      <ProfileShareCard
+        isOpen={isSharing}
+        tag={profile.tag}
+        onClose={() => setIsSharing(false)}
       />
     </div>
   );

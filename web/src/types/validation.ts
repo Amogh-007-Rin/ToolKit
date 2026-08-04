@@ -24,3 +24,11 @@ export const toolCreateSchema = z.object({
   icon: z.string().trim().max(64).default("sparkles"),
   logoUrl: z.string().trim().url().max(1000).nullable().optional(),
 });
+
+export const profileUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  bio: z.string().trim().max(200).default(""),
+  role: z.string().trim().max(200).default(""),
+  location: z.string().trim().max(200).default(""),
+  skills: z.array(z.string().trim().min(1).max(50)).max(20).default([]),
+});

@@ -126,9 +126,29 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleCopyTag}
+                        animate={{
+                          backgroundColor:
+                            copied === "tag" ? "#22c55e" : undefined,
+                        }}
+                        transition={{ duration: 0.2 }}
                         className="w-10 h-10 bg-primary text-primary-foreground rounded-xl flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors shrink-0"
                       >
-                        {copied === "tag" ? <Check size={18} /> : <Copy size={18} />}
+                        <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                            key={copied === "tag" ? "check" : "copy"}
+                            initial={{ scale: 0, rotate: -90, opacity: 0 }}
+                            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                            exit={{ scale: 0, rotate: 90, opacity: 0 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 500,
+                              damping: 24,
+                            }}
+                            className="flex"
+                          >
+                            {copied === "tag" ? <Check size={18} /> : <Copy size={18} />}
+                          </motion.span>
+                        </AnimatePresence>
                       </motion.button>
                     </div>
                   </div>
@@ -143,9 +163,29 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleCopyLink}
+                        animate={{
+                          backgroundColor:
+                            copied === "link" ? "#22c55e" : undefined,
+                        }}
+                        transition={{ duration: 0.2 }}
                         className="w-10 h-10 bg-primary text-primary-foreground rounded-xl flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors shrink-0"
                       >
-                        {copied === "link" ? <Check size={18} /> : <Copy size={18} />}
+                        <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                            key={copied === "link" ? "check" : "copy"}
+                            initial={{ scale: 0, rotate: -90, opacity: 0 }}
+                            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                            exit={{ scale: 0, rotate: 90, opacity: 0 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 500,
+                              damping: 24,
+                            }}
+                            className="flex"
+                          >
+                            {copied === "link" ? <Check size={18} /> : <Copy size={18} />}
+                          </motion.span>
+                        </AnimatePresence>
                       </motion.button>
                     </div>
                   </div>

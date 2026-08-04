@@ -89,9 +89,22 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
                   className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
                   <X size={20} />
-                </motion.button>
+                  </motion.button>
               </div>
               <div className="w-full flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm text-muted-foreground font-medium">Toolkit Tag</label>
+                  <input
+                    type="text"
+                    placeholder="your-unique-tag (letters, numbers, hyphens)"
+                    value={tag}
+                    onChange={(e) => setTag(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
+                    className="w-full h-12 bg-input border border-border rounded-xl px-4 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Your tag will be used to create a shareable profile link: toolkit.app/profile/{tag || "..."}
+                  </p>
+                </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-sm text-muted-foreground font-medium">Name</label>
                   <input
@@ -157,7 +170,7 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
                       {skills.map((skill) => (
                         <span
                           key={skill}
-                          className="flex items-center gap-1 px-3 py-1 rounded-full bg-shade-background text-foreground text-sm"
+                          className="flex items-center gap-1 px-3 rounded-full bg-shade-background text-foreground text-sm"
                         >
                           {skill}
                           <button
@@ -168,20 +181,7 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
                           </button>
                         </span>
                       ))}
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm text-muted-foreground font-medium">Toolkit Tag</label>
-                  <input
-                    type="text"
-                    placeholder="your-unique-tag (letters, numbers, hyphens)"
-                    value={tag}
-                    onChange={(e) => setTag(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
-                    className="w-full h-12 bg-input border border-border rounded-xl px-4 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors font-mono"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Your tag will be used to create a shareable profile link: toolkit.app/profile/{tag || "..."}
-                  </p>
-                </div>
-              </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -203,4 +203,4 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
       )}
     </AnimatePresence>
   );
-}
+};

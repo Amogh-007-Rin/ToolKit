@@ -18,6 +18,7 @@ model User {
   location      String?
   role          String?
   skills        String[]
+  tag           String?      @unique
   accounts      Account[]
   sessions      Session[]
   collections   Collection[]

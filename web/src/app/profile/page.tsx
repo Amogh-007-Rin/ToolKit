@@ -17,7 +17,7 @@ interface ProfileData {
   location: string;
   skills: string[];
   tag: string | null;
-}
+};
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -74,6 +74,7 @@ export default function ProfilePage() {
           role: updated.user.role ?? "",
           location: updated.user.location ?? "",
           skills: updated.user.skills ?? [],
+          tag: updated.user.tag ?? null,
         });
       }
     } catch {
@@ -136,13 +137,13 @@ export default function ProfilePage() {
                 tag="edit-profile"
                 label="Edit Profile"
                 onClick={() => setIsEditing(true)}
-                className="absolute left-27 w-[25%] h-[30%] rounded-4xl"
+                className="absolute left-22 w-[25%] h-[30%] rounded-4xl"
               />
               <Multibutton
                 tag="share-profile"
                 label="Share Profile"
                 onClick={() => setIsSharing(true)}
-                className="absolute left-65 w-[25%] h-[30%] rounded-4xl bg-foreground text-card"
+                className="absolute left-60 w-[25%] h-[30%] rounded-4xl bg-foreground text-card"
               />
             </div>
             <div className="right-part w-[70%] h-full flex items-start justify-end px-10 py-2 gap-2">
@@ -153,7 +154,7 @@ export default function ProfilePage() {
           </div>
         </div>
         <div className="part-3 w-full h-[30%]">
-
+        
         </div>
       </div>
 

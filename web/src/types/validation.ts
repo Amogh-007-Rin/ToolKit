@@ -25,6 +25,15 @@ export const toolCreateSchema = z.object({
   logoUrl: z.string().trim().url().max(1000).nullable().optional(),
 });
 
+export const postCreateSchema = z.object({
+  caption: z.string().trim().max(2200).default(""),
+  tags: z.array(z.string().trim().min(1).max(50)).max(30).default([]),
+});
+
+export const commentCreateSchema = z.object({
+  content: z.string().trim().min(1).max(500),
+});
+
 export const profileUpdateSchema = z.object({
   name: z.string().trim().min(1).max(100),
   bio: z.string().trim().max(200).default(""),

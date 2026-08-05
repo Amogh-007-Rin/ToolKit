@@ -83,20 +83,20 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="w-screen h-screen bg-background flex items-center justify-center relative">
+    <div className="min-h-screen w-screen bg-background relative">
       <button
         onClick={() => router.back()}
-        className="absolute top-6 left-6 w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors cursor-pointer z-10 shadow-2xs"
+        className="fixed top-6 left-6 w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors cursor-pointer z-10 shadow-2xs"
       >
         <ArrowLeft size={20} className="text-foreground" />
       </button>
-      <div className="profile-container w-full h-full flex flex-col bg-[#157671]">
-        <div className="banner-container w-full h-[25%] bg-red-900">
+      <div className="profile-container w-full min-h-screen flex flex-col">
+        <div className="banner-container w-full h-[25vh]">
           <BannerUploader />
         </div>
-        <div className="profile-info w-full h-[30%] relative bg-blue-900">
+        <div className="profile-info w-full h-[35vh] relative">
           <ProfileImageUploader />
-          <div className="part-1 w-full h-[30%] flex flex-col justify-center items-end gap-2 px-10 bg-pink-900">
+          <div className="part-1 w-full h-[30%] flex flex-col justify-center items-end gap-2 px-10">
             <div className="flex items-center gap-2 px-1.5">
               <p className="text-foreground">Current Role</p>
               <BriefcaseBusiness size={18} className="text-foreground" />
@@ -105,7 +105,7 @@ export default function ProfilePage() {
               <p className="text-foreground font-bold">{loading ? "..." : (profile.role || "...")}</p>
             </span>
           </div>
-          <div className="part-2 h-[27%] flex items-center bg-red-900">
+          <div className="part-2 h-[27%] flex items-center">
             <div className="profile-name w-full h-full relative flex items-center">
               <p className="absolute left-27 top-4 text-2xl font-bold text-foreground">
                 {loading ? "..." : (profile.name || "Your Name")}
@@ -115,7 +115,7 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
-          <div className="part-3 h-[10%] flex items-center bg-green-900">
+          <div className="part-3 h-[10%] flex items-center">
             <div className="profile-occupation w-full h-full relative flex items-center">
               <p className="absolute left-27 text-foreground">
                 {loading ? "..." : (profile.bio || "Your bio")}
@@ -125,7 +125,7 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
-          <div className="part-4 h-[10%] flex items-center bg-amber-900">
+          <div className="part-4 h-[10%] flex items-center">
             <div className="profile-location w-[50%] h-full relative flex items-center">
               <p className="absolute left-27 text-foreground">
                 {loading ? "..." : (profile.location || "Your location")}
@@ -136,7 +136,7 @@ export default function ProfilePage() {
               <Star size={16} className="text-foreground" />
             </div>
           </div>
-          <div className="part-5 w-full h-[28%] flex items-center bg-orange-800">
+          <div className="part-5 w-full h-[28%] flex items-center">
             <div className="left-part w-[30%] h-full flex items-center relative">
               <Multibutton
                 tag="edit-profile"
@@ -158,7 +158,7 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-        <div className="part-3-post-navigator w-full h-[45%] bg-zinc-900">
+        <div className="part-3-post-navigator w-full">
           <PostNavigationBar/>
         </div>
       </div>

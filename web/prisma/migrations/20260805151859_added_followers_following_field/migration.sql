@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "followers" BIGINT NOT NULL DEFAULT 0,
+ADD COLUMN     "following" BIGINT NOT NULL DEFAULT 0;

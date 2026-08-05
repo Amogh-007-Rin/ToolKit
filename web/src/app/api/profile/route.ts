@@ -22,6 +22,8 @@ export async function GET() {
       location: true,
       skills: true,
       tag: true,
+      followers: true,
+      following: true,
     },
   });
 
@@ -29,7 +31,13 @@ export async function GET() {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ user });
+  return NextResponse.json({
+    user: {
+      ...user,
+      followers: Number(user.followers),
+      following: Number(user.following),
+    },
+  });
 }
 
 export async function PATCH(req: Request) {

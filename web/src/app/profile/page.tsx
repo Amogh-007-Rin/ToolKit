@@ -106,9 +106,9 @@ export default function ProfilePage() {
               <p className="text-foreground font-bold">{loading ? "..." : (profile.role || "—")}</p>
             </span>
           </div>
-          <div className="part-2 h-[15%] flex items-center">
+          <div className="part-2 h-[22%] flex items-center">
             <div className="profile-name w-full h-full relative flex items-center">
-              <p className="absolute left-27 text-2xl font-bold text-foreground">
+              <p className="absolute left-27 top-4 text-2xl font-bold text-foreground">
                 {loading ? "..." : (profile.name || "Your Name")}
               </p>
             </div>
@@ -131,19 +131,19 @@ export default function ProfilePage() {
               <Star size={16} className="text-foreground" />
             </div>
           </div>
-          <div className="part-5 w-full h-[30%] flex items-center">
+          <div className="part-5 w-full h-[28%] flex items-center">
             <div className="left-part w-[30%] h-full flex items-center relative">
               <Multibutton
                 tag="edit-profile"
                 label="Edit Profile"
                 onClick={() => setIsEditing(true)}
-                className="absolute left-22 w-[25%] h-[30%] rounded-4xl"
+                className="absolute left-27 w-[25%] h-[30%] rounded-4xl"
               />
               <Multibutton
                 tag="share-profile"
                 label="Share Profile"
                 onClick={() => setIsSharing(true)}
-                className="absolute left-60 w-[25%] h-[30%] rounded-4xl bg-foreground text-card"
+                className="absolute left-57 w-[25%] h-[30%] rounded-4xl bg-foreground text-card"
               />
             </div>
             <div className="right-part w-[70%] h-full flex items-start justify-end px-10 py-2 gap-2">

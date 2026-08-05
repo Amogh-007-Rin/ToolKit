@@ -22,6 +22,9 @@ model User {
   accounts      Account[]
   sessions      Session[]
   collections   Collection[]
+  posts         Post[]
+  likes         Like[]
+  comments      Comment[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   followers     BigInt       @default(0)
@@ -53,6 +56,53 @@ model Tool {
   updatedAt    DateTime   @updatedAt
 
   @@index([collectionId])
+}
+
+model Post {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caption   String      @default("")
+  tags      String[]
+  media     PostMedia[]
+  likes     Like[]
+  comments  Comment[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([userId])
+}
+
+model PostMedia {
+  id     String @id @default(cuid())
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  url    String
+  type   String @default("image")
+  order  Int    @default(0)
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([postId])
 }
 
 model Account {

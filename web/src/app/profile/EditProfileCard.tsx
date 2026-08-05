@@ -3,21 +3,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Plus, X } from "lucide-react";
-
-interface ProfileData {
-  name: string;
-  bio: string;
-  role: string;
-  location: string;
-  skills: string[];
-  tag: string | null;
-}
+import type { EditableProfile } from "@/types/profile";
 
 interface EditProfileCardProps {
   isOpen: boolean;
-  initialData: ProfileData;
+  initialData: EditableProfile;
   onClose: () => void;
-  onSubmit: (data: ProfileData) => void;
+  onSubmit: (data: EditableProfile) => void;
 }
 
 export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit }: EditProfileCardProps) {
@@ -94,15 +86,18 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
               <div className="w-full flex-1 overflow-y-auto p-6 flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm text-muted-foreground font-medium">Toolkit Tag</label>
-                  <input
-                    type="text"
-                    placeholder="your-unique-tag (letters, numbers, hyphens)"
-                    value={tag}
-                    onChange={(e) => setTag(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
-                    className="w-full h-12 bg-input border border-border rounded-xl px-4 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors font-mono"
-                  />
+                  <div className="flex items-center h-12 bg-input border border-border rounded-xl px-4 focus-within:border-primary transition-colors">
+                    <span className="text-foreground text-sm font-mono">@</span>
+                    <input
+                      type="text"
+                      placeholder="your-unique-tag (letters, numbers, hyphens)"
+                      value={tag}
+                      onChange={(e) => setTag(e.target.value.replace(/^@/, "").replace(/[^a-zA-Z0-9_-]/g, ""))}
+                      className="flex-1 bg-transparent text-foreground text-sm placeholder:text-muted-foreground focus:outline-none font-mono ml-1"
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Your tag will be used to create a shareable profile link: toolkit.app/profile/{tag || "..."}
+                    Your tag will be used to create a shareable profile link: toolkit.app/profile/@{tag || "..."}
                   </p>
                 </div>
                 <div className="flex flex-col gap-1">

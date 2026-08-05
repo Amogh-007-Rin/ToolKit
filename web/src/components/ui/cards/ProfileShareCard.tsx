@@ -44,7 +44,7 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
 
   const handleCopyTag = async () => {
     if (!tag) return;
-    await navigator.clipboard.writeText(tag);
+    await navigator.clipboard.writeText(`@${tag}`);
     setCopied("tag");
     setTimeout(() => setCopied(null), 2000);
   };
@@ -120,7 +120,7 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
                     <p className="text-xs text-muted-foreground font-medium">Your Toolkit Tag</p>
                     <div className="flex gap-2">
                       <div className="flex-1 h-10 bg-input border border-border rounded-xl px-4 flex items-center text-foreground text-sm">
-                        {tag}
+                        @{tag}
                       </div>
                       <motion.button
                         whileHover={{ scale: 1.05 }}

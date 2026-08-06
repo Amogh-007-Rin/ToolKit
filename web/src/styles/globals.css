@@ -2,6 +2,8 @@
 
 @theme inline {
   --font-sans: var(--font-toolkit);
+  --font-mono: var(--font-toolkit);
+  --font-serif: var(--font-toolkit);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -73,6 +75,7 @@
 }
 
 body {
+  font-family: var(--font-toolkit), ui-sans-serif, system-ui, sans-serif;
   background-color: var(--background);
   color: var(--foreground);
   transition: background-color 0.2s ease, color 0.2s ease;

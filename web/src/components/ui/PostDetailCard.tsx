@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -10,6 +11,7 @@ import {
   Trash2,
   Heart,
   MessageCircle,
+  Bookmark,
   Loader2,
 } from "lucide-react";
 import type { Post, PostComment } from "@/types/posts";
@@ -20,6 +22,7 @@ interface PostDetailCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onLiked: (postId: string, liked: boolean) => void;
+  onSaved: (postId: string, saved: boolean) => void;
   onCommented: (postId: string, count: number) => void;
 }
 
@@ -29,6 +32,7 @@ export default function PostDetailCard({
   onEdit,
   onDelete,
   onLiked,
+  onSaved,
   onCommented,
 }: PostDetailCardProps) {
   const [mediaIndex, setMediaIndex] = useState(0);
@@ -39,6 +43,9 @@ export default function PostDetailCard({
   const [liked, setLiked] = useState(post.likedByMe);
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [likeBusy, setLikeBusy] = useState(false);
+  const [saved, setSaved] = useState(post.savedByMe);
+  const [savedCount, setSavedCount] = useState(post.savedCount);
+  const [saveBusy, setSaveBusy] = useState(false);
   const commentsRef = useRef<HTMLDivElement>(null);
 
   const media = post.media;
@@ -76,6 +83,27 @@ export default function PostDetailCard({
       setLikeCount((c) => c + (previousLiked ? 1 : -1));
     } finally {
       setLikeBusy(false);
+    }
+  };
+
+  const toggleSave = async () => {
+    if (saveBusy) return;
+    setSaveBusy(true);
+    const previousSaved = saved;
+    setSaved((s) => !s);
+    setSavedCount((c) => c + (previousSaved ? -1 : 1));
+    try {
+      const res = await fetch(`/api/posts/${post.id}/save`, { method: "POST" });
+      if (!res.ok) throw new Error("failed");
+      const data = await res.json();
+      setSaved(data.saved);
+      setSavedCount(data.savedCount);
+      onSaved(post.id, data.saved);
+    } catch {
+      setSaved(previousSaved);
+      setSavedCount((c) => c + (previousSaved ? 1 : -1));
+    } finally {
+      setSaveBusy(false);
     }
   };
 
@@ -158,13 +186,19 @@ export default function PostDetailCard({
               </div>
 
               <div className="w-full flex-1 flex overflow-hidden">
-                <div className="relative flex-[3] min-w-0 bg-black/40">
+                <div className="relative flex-3 min-w-0 bg-black/40">
                   {current?.type === "video" ? (
                     <video src={current.url} className="w-full h-full object-contain" controls />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={current?.url} alt={post.caption || "Post"} className="w-full h-full object-contain" />
-                  )}
+                  ) : current?.url ? (
+                    <Image
+                      src={current.url}
+                      alt={post.caption || "Post"}
+                      fill
+                      sizes="30vw"
+                      quality={100}
+                      className="object-contain"
+                    />
+                  ) : null}
                   {media.length > 1 && (
                     <>
                       <button
@@ -186,7 +220,7 @@ export default function PostDetailCard({
                   )}
                 </div>
 
-                <div className="flex-[2] min-w-0 flex flex-col border-l border-border">
+                <div className="flex-2 min-w-0 flex flex-col border-l border-border">
                   <div className="px-5 py-3 border-b border-border flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-shade-background flex items-center justify-center text-sm font-semibold text-foreground shrink-0">
@@ -197,22 +231,24 @@ export default function PostDetailCard({
                         {authorTag && <p className="text-xs text-muted-foreground truncate">{authorTag}</p>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={onEdit}
-                        title="Edit post"
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        onClick={onDelete}
-                        title="Delete post"
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-muted transition-colors cursor-pointer"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                    {post.mine && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={onEdit}
+                          title="Edit post"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={onDelete}
+                          title="Delete post"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-muted transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div ref={commentsRef} className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-4">
@@ -222,14 +258,15 @@ export default function PostDetailCard({
                           {(authorName || "U").charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                          <p className="text-sm text-foreground whitespace-pre-wrap wrap-break-word">
                             <span className="font-semibold mr-1">{authorName}</span>
+                            <br />
                             {post.caption}
                           </p>
                           {post.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mt-1">
+                            <div className="flex flex-wrap gap-x-1 mt-1">
                               {post.tags.map((tag, i) => (
-                                <span key={`${tag}-${i}`} className="text-sm text-blue-500">
+                                <span key={`${tag}-${i}`} className="text-sm text-blue-500 leading-none">
                                   #{tag}
                                 </span>
                               ))}
@@ -254,8 +291,9 @@ export default function PostDetailCard({
                             {(comment.user.name || "U").charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                            <p className="text-sm text-foreground whitespace-pre-wrap wrap-break-word">
                               <span className="font-semibold mr-1">{comment.user.name || "User"}</span>
+                              <br />
                               {comment.content}
                             </p>
                             <p className="text-xs text-muted-foreground mt-0.5">
@@ -292,10 +330,24 @@ export default function PostDetailCard({
                           />
                         </motion.button>
                         <MessageCircle size={24} className="text-foreground" />
+                        <motion.button
+                          onClick={toggleSave}
+                          whileTap={{ scale: 0.8 }}
+                          className="cursor-pointer"
+                          title={saved ? "Unsave" : "Save"}
+                        >
+                          <Bookmark
+                            size={24}
+                            className={saved ? "text-foreground" : "text-foreground"}
+                            fill={saved ? "currentColor" : "none"}
+                          />
+                        </motion.button>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold text-foreground">{likeCount} likes</p>
-                        <p className="text-xs text-muted-foreground">{post.commentCount} comments</p>
+                        <p className="text-xs text-muted-foreground">
+                          {savedCount} saved · {post.commentCount} comments
+                        </p>
                       </div>
                     </div>
 

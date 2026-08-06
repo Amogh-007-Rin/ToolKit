@@ -25,6 +25,11 @@ model User {
   posts         Post[]
   likes         Like[]
   comments      Comment[]
+  saves         SavedPost[]
+  followingRel  Follow[] @relation("UserFollowing")
+  followersRel  Follow[] @relation("UserFollowers")
+  notifications Notification[] @relation("UserNotifications")
+  notifiedActions Notification[] @relation("UserNotificationActors")
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   followers     BigInt       @default(0)
@@ -67,6 +72,7 @@ model Post {
   media     PostMedia[]
   likes     Like[]
   comments  Comment[]
+  saves     SavedPost[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
@@ -103,6 +109,43 @@ model Comment {
   createdAt DateTime @default(now())
 
   @@index([postId])
+}
+
+model SavedPost {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  actorId   String
+  type      String
+  postId    String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  actor     User     @relation("UserNotificationActors", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
 }
 
 model Account {

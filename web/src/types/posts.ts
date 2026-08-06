@@ -28,6 +28,9 @@ export interface Post {
   author: { name: string | null; tag: string | null };
   likeCount: number;
   commentCount: number;
+  savedCount: number;
   likedByMe: boolean;
+  savedByMe: boolean;
+  mine: boolean;
   createdAt: string;
 }

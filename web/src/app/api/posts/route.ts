@@ -4,30 +4,44 @@ import { getSessionUserId } from "@/lib/session";
 import { postCreateSchema } from "@/types/validation";
 import { saveFile } from "@/lib/media";
 
-export async function GET() {
+export async function GET(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const filter = searchParams.get("filter");
+  const authorId = searchParams.get("authorId");
+  const where =
+    filter === "saved"
+      ? { saves: { some: { userId } } }
+      : authorId
+        ? { userId: authorId }
+        : { userId };
+
   const posts = await prisma.post.findMany({
-    where: { userId },
+    where,
     include: {
       media: { orderBy: { order: "asc" } },
       user: { select: { name: true, tag: true } },
-      _count: { select: { likes: true, comments: true } },
+      _count: { select: { likes: true, comments: true, saves: true } },
       likes: { where: { userId }, select: { id: true } },
+      saves: { where: { userId }, select: { id: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 
   return NextResponse.json({
-    posts: posts.map(({ _count, likes, user, ...post }) => ({
+    posts: posts.map(({ _count, likes, saves, user, ...post }) => ({
       ...post,
       author: user,
       likeCount: _count.likes,
       commentCount: _count.comments,
+      savedCount: _count.saves,
       likedByMe: likes.length > 0,
+      savedByMe: saves.length > 0,
+      mine: post.userId === userId,
     })),
   });
 }

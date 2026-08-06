@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from "react";
-import { House, Kayak, LayoutDashboard, MessagesSquare, Settings } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { House, Kayak, LayoutDashboard, MessagesSquare, Settings, Sparkles } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import AnimatedLogo from "./AnimatedLogo";
 import Navbutton from "./buttons/Navbutton";
@@ -10,12 +10,13 @@ import Profilebutton from "@/components/ui/buttons/Profilebutton";
 import Notificationbutton from "@/components/ui/buttons/Notificationbutton";
 import SignoutButton from "@/components/ui/buttons/Signoutbutton";
 
-const navItems = [
+const navItems: { icon: typeof House; route: string; hover?: "gear" }[] = [
   { icon: House, route: "/dashboard" },
   { icon: LayoutDashboard, route: "/dashboard/tools" },
   { icon: MessagesSquare, route: "/dashboard/messages" },
+  { icon: Sparkles, route: "/dashboard/ai-search" },
   { icon: Kayak, route: "/dashboard/explore" },
-  { icon: Settings, route: "/dashboard/settings" },
+  { icon: Settings, route: "/dashboard/settings", hover: "gear" },
 ];
 
 export default function Sidebar() {
@@ -23,6 +24,28 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [showNotifications, setShowNotifications] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadCount(data.totalCount ?? 0);
+      }
+    } catch {
+      // silently fail
+    }
+  }, []);
+
+  useEffect(() => {
+    const initial = setTimeout(fetchUnreadCount, 0);
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+  }, [fetchUnreadCount]);
 
   const handleSignOut = async () => {
     if (isSigningOut) return;
@@ -66,16 +89,23 @@ export default function Sidebar() {
             icon={item.icon}
             onClick={() => router.push(item.route)}
             isActive={pathname === item.route}
+            hover={item.hover}
             iconClassName={pathname === item.route ? "text-background" : "text-sidebar-foreground"}
           />
         ))}
       </div>
       <div className="part-3 w-[90%] h-[25%] flex flex-col justify-evenly items-center">
-        <Notificationbutton onClick={() => setShowNotifications(true)} />
+        <Notificationbutton count={unreadCount} onClick={() => setShowNotifications(true)} />
         <SignoutButton onClick={handleSignOut} />
         <Profilebutton onClick={() => router.push("/profile")} />
       </div>
-      <NotificationPanel isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+      <NotificationPanel
+        isOpen={showNotifications}
+        onClose={() => {
+          setShowNotifications(false);
+          fetchUnreadCount();
+        }}
+      />
     </div>
   );
 };

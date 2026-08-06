@@ -1,9 +1,19 @@
 'use client'
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { X, Bell } from "lucide-react";
+import Image from "next/image";
+import { timeAgo } from "@/lib/timeAgo";
+
+interface AppNotification {
+  id: string;
+  type: string;
+  read: boolean;
+  createdAt: string;
+  actor: { name: string | null; image: string | null; tag: string | null };
+}
 
 interface NotificationPanelProps {
   isOpen: boolean;
@@ -21,6 +31,34 @@ const DROPLETS = [
 export default function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
   const router = useRouter();
   const [isExpanding, setIsExpanding] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/notifications?limit=7");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setNotifications(data.notifications ?? []);
+        await fetch("/api/notifications", { method: "PATCH" });
+        if (!cancelled) {
+          setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        }
+      } catch {
+        // silently fail
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   const handleViewAll = () => {
     setIsExpanding(true);
@@ -29,6 +67,42 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
       setIsExpanding(false);
       router.push("/dashboard/notifications");
     }, 400);
+  };
+
+  const clearNotification = async (id: string) => {
+    setRemovingIds((prev) => new Set(prev).add(id));
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 250);
+    try {
+      await fetch(`/api/notifications/${id}`, { method: "DELETE" });
+    } catch {
+      // silently fail
+    }
+  };
+
+  const clearAll = async () => {
+    const previous = notifications;
+    notifications.forEach((n, i) => {
+      setTimeout(() => {
+        setRemovingIds((prev) => new Set(prev).add(n.id));
+      }, i * 120);
+    });
+    setTimeout(() => {
+      setNotifications([]);
+      setRemovingIds(new Set());
+    }, notifications.length * 120 + 300);
+    try {
+      await fetch("/api/notifications", { method: "DELETE" });
+    } catch {
+      setNotifications(previous);
+      setRemovingIds(new Set());
+    }
   };
 
   return (
@@ -43,7 +117,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
             transition={{ duration: 0.35, ease: "easeInOut" }}
             onClick={isExpanding ? undefined : onClose}
           />
-          <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+          <div className="fixed -top-4 left-0 right-0 z-50 flex justify-center pointer-events-none">
             <svg className="absolute w-0 h-0">
               <defs>
                 <filter id="slime-goo">
@@ -97,9 +171,10 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                 }}
               >
                 <motion.div
-                  className="absolute inset-0"
+                  className="absolute top-0 left-0 right-0 h-28"
                   style={{
-                    background: "linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 40%)",
+                    background:
+                      "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)",
                   }}
                 />
                 {!isExpanding && DROPLETS.map((d, i) => (
@@ -122,7 +197,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                   />
                 ))}
                 <div className="relative p-6 z-10">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-between h-10 mb-6 shrink-0">
                     <motion.h2
                       animate={{ scale: isExpanding ? 1.15 : 1, x: isExpanding ? 8 : 0 }}
                       transition={{ duration: 0.3 }}
@@ -131,6 +206,18 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                       Notifications
                     </motion.h2>
                     <div className="flex items-center gap-3">
+                      {notifications.length > 0 && (
+                        <motion.button
+                          animate={{ opacity: isExpanding ? 0 : 1, x: isExpanding ? 20 : 0 }}
+                          transition={{ duration: 0.2 }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={clearAll}
+                          className="text-sm text-muted-foreground hover:text-red-500 transition-colors pointer-events-auto"
+                        >
+                          Clear all
+                        </motion.button>
+                      )}
                       <motion.button
                         animate={{ opacity: isExpanding ? 0 : 1, x: isExpanding ? 20 : 0 }}
                         transition={{ duration: 0.2 }}
@@ -153,11 +240,71 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                     </div>
                   </div>
                   <motion.div
+                    layout
                     animate={{ opacity: isExpanding ? 0 : 1 }}
                     transition={{ duration: 0.15 }}
-                    className="space-y-3 max-h-70 overflow-hidden"
+                    className="space-y-3 min-h-20"
                   >
-                    <p className="text-muted-foreground text-center py-8">No new notifications</p>
+                    {loading ? (
+                      <p className="text-muted-foreground text-center py-8">Loading...</p>
+                    ) : notifications.length === 0 ? (
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                        className="text-muted-foreground text-center py-8"
+                      >
+                        No new notifications
+                      </motion.p>
+                    ) : (
+                      <AnimatePresence initial={false}>
+                        {notifications.map((notification) => (
+                          <motion.div
+                            key={notification.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={
+                              removingIds.has(notification.id)
+                                ? { x: "100%", opacity: 0 }
+                                : { x: 0, opacity: 1 }
+                            }
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
+                            className="flex items-center gap-3 px-3 py-2 group"
+                          >
+                            <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                              {notification.actor.image ? (
+                                <Image
+                                  src={notification.actor.image}
+                                  alt={notification.actor.name ?? "User"}
+                                  width={36}
+                                  height={36}
+                                  className="w-full h-full object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <span className="text-sm font-semibold text-foreground">
+                                  {(notification.actor.name || "U").charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm text-foreground">
+                                <span className="font-semibold">{notification.actor.name || "Someone"}</span>{" "}
+                                started following you
+                              </p>
+                              <p className="text-xs text-muted-foreground">{timeAgo(notification.createdAt)}</p>
+                            </div>
+                            <button
+                              onClick={() => clearNotification(notification.id)}
+                              title="Clear notification"
+                              className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity cursor-pointer shrink-0"
+                            >
+                              <X size={12} />
+                            </button>
+                            <Bell size={14} className="text-muted-foreground shrink-0" />
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    )}
                   </motion.div>
                 </div>
               </motion.div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { type LucideIcon } from "lucide-react";
 
 interface NavbuttonProps {
@@ -10,9 +10,17 @@ interface NavbuttonProps {
     onClick: () => void;
     iconClassName?: string;
     isActive?: boolean;
+    hover?: "gear";
 };
 
-export default function Navbutton({ tag, icon, className, onClick, iconClassName, isActive }: NavbuttonProps) {
+const ICON_HOVER: Record<string, Variants> = {
+    gear: {
+        rest: { rotate: 0 },
+        hover: { rotate: 90, transition: { duration: 0.45, ease: "easeInOut" } },
+    },
+};
+
+export default function Navbutton({ tag, icon, className, onClick, iconClassName, isActive, hover }: NavbuttonProps) {
     const Icon = icon;
 
     return (
@@ -20,6 +28,7 @@ export default function Navbutton({ tag, icon, className, onClick, iconClassName
             layout
             className={`${tag ?? ""} w-[70%] h-[9%] rounded-2xl cursor-pointer flex items-center justify-center relative ${className ?? ""}`}
             onClick={onClick}
+            whileTap={{ scale: 0.92 }}
         >
             {isActive && (
                 <motion.div
@@ -29,9 +38,15 @@ export default function Navbutton({ tag, icon, className, onClick, iconClassName
                 />
             )}
             {Icon ? (
-                <span className="relative z-10">
+                <motion.span
+                    className="relative z-10"
+                    variants={hover ? ICON_HOVER[hover] : undefined}
+                    initial="rest"
+                    animate="rest"
+                    whileHover="hover"
+                >
                     <Icon className={iconClassName ?? (isActive ? "text-background" : "text-foreground")} strokeWidth={2} size={20} />
-                </span>
+                </motion.span>
             ) : null}
         </motion.button>
     );

@@ -15,13 +15,14 @@ const iconVariants: Variants = {
 
 interface NotificationbuttonProps {
     onClick: () => void;
+    count?: number;
 }
 
 
-export default function Notificationbutton({ onClick }: NotificationbuttonProps) {
+export default function Notificationbutton({ onClick, count = 0 }: NotificationbuttonProps) {
     return (
         <motion.button
-            className="notification-btn w-14 h-14 rounded-full flex items-center justify-center cursor-pointer"
+            className="relative notification-btn w-14 h-14 rounded-full flex items-center justify-center cursor-pointer"
             // 2. Set the initial state name
             initial="rest"
             // 3. Trigger the hover state name
@@ -33,6 +34,16 @@ export default function Notificationbutton({ onClick }: NotificationbuttonProps)
             <motion.div variants={iconVariants}>
                 <Bell className="text-foreground" size={20}/>
             </motion.div>
+            {count > 0 && (
+                <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                    className="absolute top-1 right-1 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center"
+                >
+                    {count > 99 ? "99+" : count}
+                </motion.span>
+            )}
         </motion.button>
     );
 }

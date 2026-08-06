@@ -3,6 +3,7 @@ import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { postCreateSchema } from "@/types/validation";
 import { saveFile, deleteFilesByUrls } from "@/lib/media";
+import type { Prisma } from "../../../../../generated/prisma/client";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();
@@ -32,6 +33,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     removedMediaIds = JSON.parse((formData.get("removedMediaIds") as string) ?? "[]");
   } catch {
     return NextResponse.json({ error: "Invalid removed media payload" }, { status: 400 });
+  }
+
+  let mediaOrder: { id?: string | null; new?: boolean }[] | null = null;
+  try {
+    const raw = formData.get("mediaOrder") as string | null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      mediaOrder = Array.isArray(parsed) ? parsed : null;
+    }
+  } catch {
+    return NextResponse.json({ error: "Invalid media order payload" }, { status: 400 });
   }
 
   const parsed = postCreateSchema.safeParse({
@@ -65,6 +77,32 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const removedMedia = post.media.filter((m) => removedMediaIds.includes(m.id));
     const newMedia = await Promise.all(files.map((file, index) => saveFile(file, index)));
 
+    const keepIds = new Set(
+      post.media.filter((m) => !removedMediaIds.includes(m.id)).map((m) => m.id)
+    );
+
+    const orderOps: Prisma.PrismaPromise<unknown>[] = [];
+    let newMediaIndex = 0;
+    mediaOrder?.forEach((entry, index) => {
+      if (typeof entry?.id === "string" && keepIds.has(entry.id)) {
+        orderOps.push(
+          prisma.postMedia.update({ where: { id: entry.id }, data: { order: index } })
+        );
+      } else if (entry?.new === true && newMediaIndex < newMedia.length) {
+        const media = newMedia[newMediaIndex++];
+        orderOps.push(
+          prisma.postMedia.create({ data: { ...media, order: index, postId: id } })
+        );
+      }
+    });
+    for (let i = newMediaIndex; i < newMedia.length; i++) {
+      orderOps.push(
+        prisma.postMedia.create({
+          data: { ...newMedia[i], order: post.media.length + i, postId: id },
+        })
+      );
+    }
+
     await prisma.$transaction([
       prisma.postMedia.deleteMany({
         where: { id: { in: removedMediaIds }, postId: id },
@@ -76,11 +114,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           tags,
         },
       }),
-      ...newMedia.map((m, index) =>
-        prisma.postMedia.create({
-          data: { ...m, order: post.media.length + index, postId: id },
-        })
-      ),
+      ...orderOps,
     ]);
 
     await deleteFilesByUrls(removedMedia.map((m) => m.url));

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, ChangeEvent } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageIcon, Video, X, Check, Loader2 } from "lucide-react";
 
@@ -158,8 +159,14 @@ export default function MakePostCard({ isOpen, onClose, onPosted }: MakePostCard
                         {m.type.startsWith("video") ? (
                           <video src={m.url} className="w-full h-full object-cover" muted />
                         ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={m.url} alt={`Selected media ${i + 1}`} className="w-full h-full object-cover" />
+                          <Image
+                            src={m.url}
+                            alt={`Selected media ${i + 1}`}
+                            fill
+                            sizes="25vw"
+                            quality={100}
+                            className="object-cover"
+                          />
                         )}
                         <button
                           onClick={() => removeMedia(i)}

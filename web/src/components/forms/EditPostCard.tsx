@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, ChangeEvent } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageIcon, Video, X, Check, Loader2 } from "lucide-react";
 import type { Post } from "@/types/posts";
@@ -29,6 +30,7 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
   const [tags, setTags] = useState(post.tags.map((t) => `#${t}`).join(", "));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const close = () => {
@@ -73,6 +75,16 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
     setMedia((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleDragOver = (targetIndex: number) => {
+    if (dragIndex === null || dragIndex === targetIndex) return;
+    setMedia((prev) => {
+      const next = [...prev];
+      [next[dragIndex], next[targetIndex]] = [next[targetIndex], next[dragIndex]];
+      return next;
+    });
+    setDragIndex(targetIndex);
+  };
+
   const submit = async () => {
     if (media.length === 0 || submitting) return;
 
@@ -87,6 +99,10 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
     }
     const keptDbIds = new Set(media.filter((m) => !m.isNew && m.dbId).map((m) => m.dbId!));
     formData.append("removedMediaIds", JSON.stringify(post.media.map((m) => m.id).filter((id) => !keptDbIds.has(id))));
+    formData.append(
+      "mediaOrder",
+      JSON.stringify(media.map((m) => (m.isNew ? { new: true } : { id: m.dbId })))
+    );
     formData.append("caption", caption);
     formData.append(
       "tags",
@@ -152,16 +168,35 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
               <div className="w-full flex-1 overflow-y-auto p-6 flex flex-col gap-5">
                 <div className="flex flex-col gap-2">
                   <label className="text-sm text-muted-foreground font-medium">
-                    Media — multiple images or a single video
+                    Media — drag to reorder
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {media.map((m, i) => (
-                      <div key={i} className="relative aspect-square rounded-xl overflow-hidden bg-muted/30">
+                      <div
+                        key={i}
+                        draggable
+                        onDragStart={() => setDragIndex(i)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          handleDragOver(i);
+                        }}
+                        onDrop={(e) => e.preventDefault()}
+                        onDragEnd={() => setDragIndex(null)}
+                        className={`relative aspect-square rounded-xl overflow-hidden bg-muted/30 cursor-grab active:cursor-grabbing ${
+                          dragIndex === i ? "opacity-50" : ""
+                        }`}
+                      >
                         {m.type.startsWith("video") ? (
                           <video src={m.url} className="w-full h-full object-cover" muted />
                         ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={m.url} alt={`Media ${i + 1}`} className="w-full h-full object-cover" />
+                          <Image
+                            src={m.url}
+                            alt={`Media ${i + 1}`}
+                            fill
+                            sizes="25vw"
+                            quality={100}
+                            className="object-cover"
+                          />
                         )}
                         {!m.isNew && (
                           <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[10px]">
@@ -174,6 +209,9 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
                         >
                           <X size={12} />
                         </button>
+                        <span className="absolute bottom-1.5 left-1.5 w-5 h-5 rounded-md bg-black/60 text-white text-[10px] flex items-center justify-center">
+                          {i + 1}
+                        </span>
                       </div>
                     ))}
                     {media.length < MAX_FILES && !media.some((m) => m.type.startsWith("video")) && (

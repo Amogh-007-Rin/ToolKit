@@ -83,7 +83,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen w-screen bg-background relative">
+    <div className="min-h-screen w-full bg-background relative">
       <button
         onClick={() => router.back()}
         className="fixed top-6 left-6 w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors cursor-pointer z-10 shadow-2xs"
@@ -91,7 +91,7 @@ export default function ProfilePage() {
         <ArrowLeft size={20} className="text-foreground" />
       </button>
       <div className="profile-container w-full min-h-screen flex flex-col">
-        <div className="banner-container w-full h-[25vh]">
+        <div className="banner-container w-full h-[25vh] bg-gradient-to-br from-primary/20 via-shade-background to-card">
           <BannerUploader />
         </div>
         <div className="profile-info w-full h-[35vh] relative">
@@ -148,7 +148,7 @@ export default function ProfilePage() {
                 tag="share-profile"
                 label="Share Profile"
                 onClick={() => setIsSharing(true)}
-                className="absolute left-65 w-[25%] h-[30%] rounded-4xl bg-foreground text-card"
+                className="absolute left-57 w-[25%] h-[30%] rounded-4xl bg-foreground text-card"
               />
             </div>
             <div className="right-part w-[70%] h-full flex items-start justify-end px-10 py-2 gap-2">
@@ -158,7 +158,7 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-        <div className="part-3-post-navigator w-full">
+        <div className="part-3-post-navigator w-full py-4">
           <PostNavigationBar/>
         </div>
       </div>

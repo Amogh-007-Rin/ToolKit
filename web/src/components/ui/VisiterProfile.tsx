@@ -246,7 +246,7 @@ export default function VisiterProfile() {
                     tag="message-profile"
                     label="Message"
                     icon={MessageCircle}
-                    onClick={() => router.push("/dashboard/messages")}
+                    onClick={() => router.push(`/dashboard/messages?user=${user.id}`)}
                     className="absolute left-57 w-[25%] h-[30%] rounded-4xl bg-foreground text-card"
                     iconClassName="text-card"
                     textClassName="text-card"

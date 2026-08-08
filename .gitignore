@@ -1,0 +1,14 @@
+.env
+
+# Node
+node_modules/
+
+# Rust
+message-service/target/
+
+# Next.js
+web/.next/
+web/out/
+
+# Misc
+*.log

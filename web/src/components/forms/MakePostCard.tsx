@@ -4,6 +4,7 @@ import { useState, useRef, ChangeEvent } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageIcon, Video, X, Check, Loader2 } from "lucide-react";
+import { uploadFile } from "@/services/media";
 
 interface MakePostCardProps {
   isOpen: boolean;
@@ -11,22 +12,28 @@ interface MakePostCardProps {
   onPosted: () => void;
 }
 
-interface SelectedMedia {
-  url: string;
+interface PendingMedia {
+  id: string;
   type: string;
+  previewUrl: string;
+  key: string | null;
+  progress: number;
+  error: boolean;
 }
 
 const MAX_FILES = 10;
 
 export default function MakePostCard({ isOpen, onClose, onPosted }: MakePostCardProps) {
-  const [media, setMedia] = useState<SelectedMedia[]>([]);
+  const [media, setMedia] = useState<PendingMedia[]>([]);
   const [caption, setCaption] = useState("");
   const [tags, setTags] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadSeqRef = useRef(0);
 
   const reset = () => {
+    media.forEach((m) => URL.revokeObjectURL(m.previewUrl));
     setMedia([]);
     setCaption("");
     setTags("");
@@ -36,6 +43,17 @@ export default function MakePostCard({ isOpen, onClose, onPosted }: MakePostCard
   const close = () => {
     reset();
     onClose();
+  };
+
+  const updateItem = (id: string, patch: Partial<PendingMedia>) => {
+    setMedia((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+  };
+
+  const startUpload = (file: File, id: string) => {
+    updateItem(id, { progress: 0, error: false });
+    uploadFile(file, "post", (fraction) => updateItem(id, { progress: fraction }))
+      .then(({ key, kind }) => updateItem(id, { key, type: kind === "video" ? "video/mp4" : "image/jpeg", progress: 1 }))
+      .catch(() => updateItem(id, { error: true }));
   };
 
   const handleFiles = (files: FileList | null) => {
@@ -50,7 +68,13 @@ export default function MakePostCard({ isOpen, onClose, onPosted }: MakePostCard
       setError("Only images and videos are supported");
       return;
     }
-    if (videos.length > 1 || (videos.length === 1 && images.length > 0)) {
+    const existingVideo = media.some((m) => m.type.startsWith("video"));
+    const hasExisting = media.length > 0;
+    if (videos.length > 1 || (videos.length === 1 && (images.length > 0 || hasExisting || existingVideo))) {
+      setError("A post can contain multiple images or a single video");
+      return;
+    }
+    if (existingVideo && images.length > 0) {
       setError("A post can contain multiple images or a single video");
       return;
     }
@@ -59,10 +83,21 @@ export default function MakePostCard({ isOpen, onClose, onPosted }: MakePostCard
       return;
     }
 
-    setMedia((prev) => [
-      ...prev,
-      ...incoming.map((f) => ({ url: URL.createObjectURL(f), type: f.type })),
-    ]);
+    const next: PendingMedia[] = [];
+    for (const file of incoming) {
+      const id = `pm-${uploadSeqRef.current++}`;
+      next.push({
+        id,
+        type: file.type,
+        previewUrl: URL.createObjectURL(file),
+        key: null,
+        progress: 0,
+        error: false,
+      });
+      startUpload(file, id);
+    }
+
+    setMedia((prev) => [...prev, ...next]);
   };
 
   const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -71,38 +106,43 @@ export default function MakePostCard({ isOpen, onClose, onPosted }: MakePostCard
   };
 
   const removeMedia = (index: number) => {
-    setMedia((prev) => prev.filter((_, i) => i !== index));
+    setMedia((prev) => {
+      const target = prev[index];
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
+  const uploadInProgress = media.some((m) => !m.error && !m.key);
+  const readyMedia = media.filter((m) => m.key && !m.error);
+
   const submit = async () => {
-    if (media.length === 0 || submitting) return;
+    if (media.length === 0 || submitting || uploadInProgress) return;
 
     setSubmitting(true);
     setError(null);
-    const formData = new FormData();
-    for (const m of media) {
-      const blob = await fetch(m.url).then((r) => r.blob());
-      const isVideo = m.type.startsWith("video");
-      const extension = isVideo ? "video" : "image";
-      formData.append("files", new File([blob], `media-${Date.now()}.${extension}`, { type: m.type }));
-    }
-    formData.append("caption", caption);
-    formData.append(
-      "tags",
-      JSON.stringify(
-        [
-          ...new Set(
-            tags
-              .split(",")
-              .map((t) => t.trim().replace(/^#/, ""))
-              .filter(Boolean)
-          ),
-        ]
-      )
-    );
 
     try {
-      const res = await fetch("/api/posts", { method: "POST", body: formData });
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caption,
+          tags: [
+            ...new Set(
+              tags
+                .split(",")
+                .map((t) => t.trim().replace(/^#/, ""))
+                .filter(Boolean),
+            ),
+          ],
+          media: readyMedia.map((m, i) => ({
+            key: m.key as string,
+            type: m.type.startsWith("video") ? "video" : "image",
+            order: i,
+          })),
+        }),
+      });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error ?? "Failed to create post");
@@ -148,26 +188,38 @@ export default function MakePostCard({ isOpen, onClose, onPosted }: MakePostCard
                 </motion.button>
               </div>
 
-              <div className="w-full flex-1 overflow-y-auto p-6 flex flex-col gap-5">
+              <div data-lenis-prevent className="w-full flex-1 overflow-y-auto p-6 flex flex-col gap-5">
                 <div className="flex flex-col gap-2">
                   <label className="text-sm text-muted-foreground font-medium">
                     Media — multiple images or a single video
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {media.map((m, i) => (
-                      <div key={i} className="relative aspect-square rounded-xl overflow-hidden bg-muted/30">
+                      <div key={m.id} className="relative aspect-square rounded-xl overflow-hidden bg-muted/30">
                         {m.type.startsWith("video") ? (
-                          <video src={m.url} className="w-full h-full object-cover" muted />
+                          <video src={m.previewUrl} className="w-full h-full object-cover" muted playsInline />
                         ) : (
                           <Image
-                            src={m.url}
+                            src={m.previewUrl}
                             alt={`Selected media ${i + 1}`}
                             fill
                             sizes="25vw"
                             quality={100}
                             className="object-cover"
+                            unoptimized
                           />
                         )}
+                        {!m.key && !m.error ? (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <p className="text-white text-xs font-medium">
+                              {Math.round(m.progress * 100)}%
+                            </p>
+                          </div>
+                        ) : m.error ? (
+                          <div className="absolute inset-0 bg-destructive/60 flex items-center justify-center">
+                            <p className="text-white text-xs">Upload failed</p>
+                          </div>
+                        ) : null}
                         <button
                           onClick={() => removeMedia(i)}
                           className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center cursor-pointer hover:bg-black/80 transition-colors"
@@ -192,6 +244,7 @@ export default function MakePostCard({ isOpen, onClose, onPosted }: MakePostCard
                     accept="image/*,video/*"
                     multiple
                     onChange={onFileChange}
+                    disabled={uploadInProgress}
                     className="hidden"
                   />
                 </div>
@@ -227,11 +280,11 @@ export default function MakePostCard({ isOpen, onClose, onPosted }: MakePostCard
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={submit}
-                  disabled={media.length === 0 || submitting}
+                  disabled={media.length === 0 || submitting || uploadInProgress}
                   className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-medium text-sm hover:bg-primary/90 disabled:opacity-50 transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
-                  {submitting ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
-                  {submitting ? "Sharing..." : "Share"}
+                  {submitting || uploadInProgress ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                  {submitting ? "Sharing..." : uploadInProgress ? "Uploading..." : "Share"}
                 </motion.button>
               </div>
             </motion.div>

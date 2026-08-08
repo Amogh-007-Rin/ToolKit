@@ -152,6 +152,7 @@ export default function PostNavigationBar() {
                             fill
                             sizes="40vw"
                             quality={100}
+                            unoptimized
                             loading={index < 5 ? "eager" : "lazy"}
                             className="object-cover group-hover:opacity-90 transition-opacity"
                           />
@@ -199,6 +200,7 @@ export default function PostNavigationBar() {
                             fill
                             sizes="40vw"
                             quality={100}
+                            unoptimized
                             loading={index < 5 ? "eager" : "lazy"}
                             className="object-cover group-hover:opacity-90 transition-opacity"
                           />

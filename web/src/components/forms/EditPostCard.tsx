@@ -4,6 +4,7 @@ import { useState, useRef, ChangeEvent } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageIcon, Video, X, Check, Loader2 } from "lucide-react";
+import { uploadFile } from "@/services/media";
 import type { Post } from "@/types/posts";
 
 interface EditPostCardProps {
@@ -13,18 +14,35 @@ interface EditPostCardProps {
   onSaved: () => void;
 }
 
-interface SelectedMedia {
+interface ExistingItem {
+  kind: "existing";
+  dbId: string;
   url: string;
   type: string;
-  isNew: boolean;
-  dbId?: string;
 }
+
+interface NewItem {
+  kind: "new";
+  uploadId: string;
+  key: string | null;
+  type: string;
+  previewUrl: string;
+  progress: number;
+  error: boolean;
+}
+
+type MediaItem = ExistingItem | NewItem;
 
 const MAX_FILES = 10;
 
 export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPostCardProps) {
-  const [media, setMedia] = useState<SelectedMedia[]>(() =>
-    post.media.map((m) => ({ url: m.url, type: m.type === "video" ? "video/mp4" : "image/jpeg", isNew: false, dbId: m.id }))
+  const [media, setMedia] = useState<MediaItem[]>(() =>
+    post.media.map((m) => ({
+      kind: "existing" as const,
+      dbId: m.id,
+      url: m.url,
+      type: m.type,
+    })),
   );
   const [caption, setCaption] = useState(post.caption);
   const [tags, setTags] = useState(post.tags.map((t) => `#${t}`).join(", "));
@@ -32,11 +50,34 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
   const [error, setError] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadSeqRef = useRef(0);
 
   const close = () => {
+    media.forEach((m) => {
+      if (m.kind === "new") URL.revokeObjectURL(m.previewUrl);
+    });
     setSubmitting(false);
     setError(null);
     onClose();
+  };
+
+  const updateNewItem = (uploadId: string, patch: Partial<NewItem>) => {
+    setMedia((prev) =>
+      prev.map((m) => (m.kind === "new" && m.uploadId === uploadId ? { ...m, ...patch } : m)),
+    );
+  };
+
+  const startUpload = (file: File, uploadId: string) => {
+    updateNewItem(uploadId, { progress: 0, error: false });
+    uploadFile(file, "post", (fraction) => updateNewItem(uploadId, { progress: fraction }))
+      .then(({ key, kind }) =>
+        updateNewItem(uploadId, {
+          key,
+          type: kind === "video" ? "video" : "image",
+          progress: 1,
+        }),
+      )
+      .catch(() => updateNewItem(uploadId, { error: true }));
   };
 
   const handleFiles = (files: FileList | null) => {
@@ -51,7 +92,13 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
       setError("Only images and videos are supported");
       return;
     }
-    if (videos.length > 1 || (videos.length === 1 && images.length > 0)) {
+    const existingVideo = media.some((m) => m.type === "video");
+    const hasExisting = media.length > 0;
+    if (videos.length > 1 || (videos.length === 1 && (images.length > 0 || hasExisting || existingVideo))) {
+      setError("A post can contain multiple images or a single video");
+      return;
+    }
+    if (existingVideo && images.length > 0) {
       setError("A post can contain multiple images or a single video");
       return;
     }
@@ -60,10 +107,23 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
       return;
     }
 
-    setMedia((prev) => [
-      ...prev,
-      ...incoming.map((f) => ({ url: URL.createObjectURL(f), type: f.type, isNew: true })),
-    ]);
+    const next: NewItem[] = [];
+    for (const file of incoming) {
+      const uploadId = `em-${uploadSeqRef.current++}`;
+      const item: NewItem = {
+        kind: "new",
+        uploadId,
+        key: null,
+        type: file.type.startsWith("video") ? "video" : "image",
+        previewUrl: URL.createObjectURL(file),
+        progress: 0,
+        error: false,
+      };
+      next.push(item);
+      startUpload(file, uploadId);
+    }
+
+    setMedia((prev) => [...prev, ...next]);
   };
 
   const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -72,7 +132,11 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
   };
 
   const removeMedia = (index: number) => {
-    setMedia((prev) => prev.filter((_, i) => i !== index));
+    setMedia((prev) => {
+      const target = prev[index];
+      if (target?.kind === "new") URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleDragOver = (targetIndex: number) => {
@@ -85,41 +149,45 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
     setDragIndex(targetIndex);
   };
 
+  const uploadInProgress = media.some((m) => m.kind === "new" && !m.error && !m.key);
+
   const submit = async () => {
-    if (media.length === 0 || submitting) return;
+    if (media.length === 0 || submitting || uploadInProgress) return;
 
     setSubmitting(true);
     setError(null);
-    const formData = new FormData();
-    for (const m of media) {
-      if (!m.isNew) continue;
-      const blob = await fetch(m.url).then((r) => r.blob());
-      const isVideo = m.type.startsWith("video");
-      formData.append("files", new File([blob], `media-${Date.now()}.${isVideo ? "video" : "image"}`, { type: m.type }));
-    }
-    const keptDbIds = new Set(media.filter((m) => !m.isNew && m.dbId).map((m) => m.dbId!));
-    formData.append("removedMediaIds", JSON.stringify(post.media.map((m) => m.id).filter((id) => !keptDbIds.has(id))));
-    formData.append(
-      "mediaOrder",
-      JSON.stringify(media.map((m) => (m.isNew ? { new: true } : { id: m.dbId })))
+
+    const keptDbIds = new Set(
+      media.filter((m) => m.kind === "existing").map((m) => m.dbId),
     );
-    formData.append("caption", caption);
-    formData.append(
-      "tags",
-      JSON.stringify(
-        [
-          ...new Set(
-            tags
-              .split(",")
-              .map((t) => t.trim().replace(/^#/, ""))
-              .filter(Boolean)
-          ),
-        ]
-      )
+    const removedMediaIds = post.media
+      .map((m) => m.id)
+      .filter((id) => !keptDbIds.has(id));
+
+    const mediaOrder = media.map((m) =>
+      m.kind === "existing"
+        ? { id: m.dbId }
+        : { key: m.key as string, type: m.type },
     );
 
     try {
-      const res = await fetch(`/api/posts/${post.id}`, { method: "PATCH", body: formData });
+      const res = await fetch(`/api/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caption,
+          tags: [
+            ...new Set(
+              tags
+                .split(",")
+                .map((t) => t.trim().replace(/^#/, ""))
+                .filter(Boolean),
+            ),
+          ],
+          removedMediaIds,
+          media: mediaOrder,
+        }),
+      });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error ?? "Failed to update post");
@@ -132,6 +200,9 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
       setSubmitting(false);
     }
   };
+
+  const hasVideo = media.some((m) => m.type === "video");
+  const uploadOrSubmitting = submitting || uploadInProgress;
 
   return (
     <AnimatePresence>
@@ -173,7 +244,7 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
                   <div className="grid grid-cols-3 gap-2">
                     {media.map((m, i) => (
                       <div
-                        key={i}
+                        key={m.kind === "existing" ? m.dbId : m.uploadId}
                         draggable
                         onDragStart={() => setDragIndex(i)}
                         onDragOver={(e) => {
@@ -186,22 +257,40 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
                           dragIndex === i ? "opacity-50" : ""
                         }`}
                       >
-                        {m.type.startsWith("video") ? (
-                          <video src={m.url} className="w-full h-full object-cover" muted />
+                        {m.type === "video" ? (
+                          <video
+                            src={m.kind === "existing" ? m.url : m.previewUrl}
+                            className="w-full h-full object-cover"
+                            muted
+                            playsInline
+                          />
                         ) : (
                           <Image
-                            src={m.url}
+                            src={m.kind === "existing" ? m.url : m.previewUrl}
                             alt={`Media ${i + 1}`}
                             fill
                             sizes="25vw"
                             quality={100}
                             className="object-cover"
+                            unoptimized
                           />
                         )}
-                        {!m.isNew && (
+                        {m.kind === "existing" && (
                           <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[10px]">
                             existing
                           </span>
+                        )}
+                        {m.kind === "new" && !m.key && !m.error && (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <p className="text-white text-xs font-medium">
+                              {Math.round(m.progress * 100)}%
+                            </p>
+                          </div>
+                        )}
+                        {m.kind === "new" && m.error && (
+                          <div className="absolute inset-0 bg-destructive/60 flex items-center justify-center">
+                            <p className="text-white text-xs">Upload failed</p>
+                          </div>
                         )}
                         <button
                           onClick={() => removeMedia(i)}
@@ -214,7 +303,7 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
                         </span>
                       </div>
                     ))}
-                    {media.length < MAX_FILES && !media.some((m) => m.type.startsWith("video")) && (
+                    {media.length < MAX_FILES && !hasVideo && (
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         className="aspect-square rounded-xl border-2 border-dashed border-muted-foreground/40 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer"
@@ -230,6 +319,7 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
                     accept="image/*,video/*"
                     multiple
                     onChange={onFileChange}
+                    disabled={uploadInProgress}
                     className="hidden"
                   />
                 </div>
@@ -265,11 +355,11 @@ export default function EditPostCard({ isOpen, post, onClose, onSaved }: EditPos
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={submit}
-                  disabled={media.length === 0 || submitting}
+                  disabled={media.length === 0 || uploadOrSubmitting}
                   className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-medium text-sm hover:bg-primary/90 disabled:opacity-50 transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
-                  {submitting ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
-                  {submitting ? "Saving..." : "Save changes"}
+                  {uploadOrSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                  {submitting ? "Saving..." : uploadInProgress ? "Uploading..." : "Save changes"}
                 </motion.button>
               </div>
             </motion.div>

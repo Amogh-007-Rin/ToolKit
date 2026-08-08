@@ -187,18 +187,19 @@ export default function PostDetailCard({
 
               <div className="w-full flex-1 flex overflow-hidden">
                 <div className="relative flex-3 min-w-0 bg-black/40">
-                  {current?.type === "video" ? (
-                    <video src={current.url} className="w-full h-full object-contain" controls />
-                  ) : current?.url ? (
-                    <Image
-                      src={current.url}
-                      alt={post.caption || "Post"}
-                      fill
-                      sizes="30vw"
-                      quality={100}
-                      className="object-contain"
-                    />
-                  ) : null}
+                    {current?.type === "video" ? (
+                      <video src={current.url} className="w-full h-full object-contain" controls />
+                    ) : current?.url ? (
+                      <Image
+                        src={current.url}
+                        alt={post.caption || "Post"}
+                        fill
+                        sizes="30vw"
+                        quality={100}
+                        unoptimized
+                        className="object-contain"
+                      />
+                    ) : null}
                   {media.length > 1 && (
                     <>
                       <button

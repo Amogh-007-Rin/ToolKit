@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { postCreateSchema } from "@/types/validation";
-import { saveFile } from "@/lib/media";
+import { assertValidKey, resolveStoredUrl } from "@/lib/storage";
 
 export async function GET(req: Request) {
   const userId = await getSessionUserId();
@@ -32,10 +32,13 @@ export async function GET(req: Request) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({
-    posts: posts.map(({ _count, likes, saves, user, ...post }) => ({
+  const resolved = await Promise.all(
+    posts.map(async ({ _count, likes, saves, user, media, ...post }) => ({
       ...post,
       author: user,
+      media: await Promise.all(
+        media.map(async (m) => ({ ...m, url: (await resolveStoredUrl(m.url)) as string })),
+      ),
       likeCount: _count.likes,
       commentCount: _count.comments,
       savedCount: _count.saves,
@@ -43,7 +46,9 @@ export async function GET(req: Request) {
       savedByMe: saves.length > 0,
       mine: post.userId === userId,
     })),
-  });
+  );
+
+  return NextResponse.json({ posts: resolved });
 }
 
 export async function POST(req: Request) {
@@ -52,49 +57,71 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let formData: FormData;
+  let body: { caption?: unknown; tags?: unknown; media?: unknown };
   try {
-    formData = await req.formData();
+    body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid multipart form data" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
   const parsed = postCreateSchema.safeParse({
-    caption: (formData.get("caption") as string) ?? "",
-    tags: JSON.parse((formData.get("tags") as string) ?? "[]"),
+    caption: body.caption ?? "",
+    tags: body.tags ?? [],
   });
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Invalid input" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   const tags = [...new Set(parsed.data.tags)];
 
-  const files = formData.getAll("files").filter((f): f is File => f instanceof File);
-  if (files.length === 0) {
-    return NextResponse.json({ error: "At least one image or video is required" }, { status: 400 });
+  if (!Array.isArray(body.media) || body.media.length === 0) {
+    return NextResponse.json({ error: "At least one media entry is required" }, { status: 400 });
   }
 
-  const videos = files.filter((f) => f.type.startsWith("video"));
+  const mediaInput: { key: string; type: string; order: number }[] = [];
+  for (const entry of body.media) {
+    if (!entry || typeof entry !== "object") {
+      return NextResponse.json({ error: "Invalid media entry" }, { status: 400 });
+    }
+    const key = (entry as Record<string, unknown>).key;
+    const type = (entry as Record<string, unknown>).type;
+    const order = (entry as Record<string, unknown>).order;
+    if (typeof key !== "string" || typeof type !== "string") {
+      return NextResponse.json({ error: "Each media entry must have key and type" }, { status: 400 });
+    }
+    if (type !== "image" && type !== "video") {
+      return NextResponse.json({ error: "Media type must be image or video" }, { status: 400 });
+    }
+    try {
+      assertValidKey(key);
+    } catch {
+      return NextResponse.json({ error: "Invalid media key" }, { status: 400 });
+    }
+    if (!key.startsWith("posts/")) {
+      return NextResponse.json({ error: "Media key must belong to posts" }, { status: 403 });
+    }
+    mediaInput.push({ key, type, order: typeof order === "number" && order >= 0 ? order : mediaInput.length });
+  }
+
+  const videos = mediaInput.filter((m) => m.type === "video");
   if (videos.length > 1) {
     return NextResponse.json({ error: "Only one video per post is allowed" }, { status: 400 });
   }
-  if (videos.length === 1 && files.length > 1) {
+  if (videos.length === 1 && mediaInput.length > 1) {
     return NextResponse.json({ error: "A video cannot be combined with other media" }, { status: 400 });
   }
 
   try {
-    const media = await Promise.all(files.map((file, index) => saveFile(file, index)));
-
     const post = await prisma.post.create({
       data: {
         userId,
         caption: parsed.data.caption,
         tags,
         media: {
-          create: media.map((m, index) => ({ ...m, order: index })),
+          create: mediaInput.map((m) => ({ url: m.key, type: m.type, order: m.order })),
         },
       },
       include: { media: { orderBy: { order: "asc" } } },
@@ -104,7 +131,7 @@ export async function POST(req: Request) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create post" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 }

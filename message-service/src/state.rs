@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::pubsub::RedisBus;
 use crate::ws::messages::ServerEvent;
+use chrono::{DateTime, Utc};
 use dashmap::{DashMap, DashSet};
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -32,6 +33,7 @@ pub struct AppState {
     pub redis: Arc<RedisBus>,
     pub sessions: Arc<DashMap<ConnId, Session>>,
     pub room_connections: Arc<DashMap<RoomId, DashSet<ConnId>>>,
+    pub last_seen: Arc<DashMap<UserId, DateTime<Utc>>>,
     shutdown_tx: broadcast::Sender<()>,
 }
 
@@ -44,6 +46,7 @@ impl AppState {
             redis,
             sessions: Arc::new(DashMap::new()),
             room_connections: Arc::new(DashMap::new()),
+            last_seen: Arc::new(DashMap::new()),
             shutdown_tx,
         }
     }
@@ -77,7 +80,22 @@ impl AppState {
                     connections.remove(&conn_id);
                 }
             }
+            let has_other_connections = self
+                .sessions
+                .iter()
+                .any(|entry| entry.value().user_id == session.user_id);
+            if !has_other_connections {
+                self.last_seen.insert(session.user_id.clone(), Utc::now());
+            }
         }
+    }
+
+    pub fn touch_user(&self, user_id: &str) {
+        self.last_seen.remove(user_id);
+    }
+
+    pub fn get_user_last_seen(&self, user_id: &str) -> Option<DateTime<Utc>> {
+        self.last_seen.get(user_id).map(|entry| *entry.value())
     }
 
     pub fn join_room(&self, conn_id: ConnId, room_id: &str) {

@@ -7,14 +7,18 @@ import { type Contact, type RoomListItem } from "@/services/messaging";
 function Avatar({ contact, size = 40 }: { contact?: Contact | null; size?: number }) {
   if (contact?.image) {
     return (
-      <Image
-        src={contact.image}
-        alt=""
-        width={size}
-        height={size}
-        unoptimized
-        className="rounded-full object-cover shrink-0"
-      />
+      <div
+        className="rounded-full overflow-hidden shrink-0 relative"
+        style={{ width: size, height: size }}
+      >
+        <Image
+          src={contact.image}
+          alt=""
+          fill
+          unoptimized
+          className="object-cover"
+        />
+      </div>
     );
   }
   const initials = (contact?.name ?? "?")
@@ -51,11 +55,11 @@ export default function RoomList({
   onSelect: (roomId: string) => void;
 }) {
   return (
-    <aside className="w-full md:w-[300px] shrink-0 h-full bg-card rounded-3xl flex flex-col overflow-hidden">
+    <aside className="w-full md:w-75 shrink-0 h-full bg-card rounded-3xl flex flex-col overflow-hidden">
       <div className="px-5 py-4 border-b border-border">
         <h2 className="text-xl font-bold text-foreground">Messages</h2>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div data-lenis-prevent className="flex-1 overflow-y-auto">
         {rooms.length === 0 ? (
           <p className="text-muted-foreground text-sm p-5">
             No conversations yet. Open someone&apos;s profile and press Message.
@@ -87,14 +91,18 @@ export default function RoomList({
                   </div>
                   <p className="text-sm text-muted-foreground truncate">
                     {room.lastMessage
-                      ? `${room.lastMessage.senderId === meId ? "You: " : ""}${room.lastMessage.content}`
+                      ? room.unreadCount === 0
+                        ? `${room.lastMessage.senderId === meId ? "You: " : ""}${room.lastMessage.content}`
+                        : room.unreadCount === 1
+                          ? `${room.lastMessage.senderId === meId ? "You: " : ""}${room.lastMessage.content}`
+                          : room.unreadCount >= 4
+                            ? "4+ new messages"
+                            : `${room.unreadCount} new messages`
                       : "No messages yet"}
                   </p>
                 </div>
                 {room.unreadCount > 0 ? (
-                  <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
-                    {room.unreadCount > 99 ? "99+" : room.unreadCount}
-                  </span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white shrink-0" />
                 ) : null}
               </button>
             );

@@ -26,12 +26,14 @@ pub struct MessagePreview {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RoomListItem {
     #[serde(flatten)]
     pub room: Room,
     pub members: Vec<String>,
     pub last_message: Option<MessagePreview>,
     pub unread_count: i64,
+    pub member_last_seen: HashMap<String, Option<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -89,6 +91,27 @@ async fn list_rooms(
         rows.into_iter()
             .map(|row| {
                 let room_id = row.id.clone();
+                let members = members_by_room
+                    .get(&room_id)
+                    .cloned()
+                    .unwrap_or_default();
+                let member_last_seen: HashMap<String, Option<String>> = members
+                    .iter()
+                    .map(|member_id| {
+                        let online = state
+                            .sessions
+                            .iter()
+                            .any(|entry| entry.value().user_id == *member_id);
+                        let last_seen = if online {
+                            None
+                        } else {
+                            state
+                                .get_user_last_seen(member_id)
+                                .map(|dt| dt.to_rfc3339())
+                        };
+                        (member_id.clone(), last_seen)
+                    })
+                    .collect();
                 RoomListItem {
                     room: Room {
                         id: row.id,
@@ -97,7 +120,7 @@ async fn list_rooms(
                         created_by: row.created_by,
                         created_at: row.created_at,
                     },
-                    members: members_by_room.get(&room_id).cloned().unwrap_or_default(),
+                    members,
                     last_message: row.last_message_id.as_ref().map(|last_message_id| {
                         MessagePreview {
                             id: last_message_id.clone(),
@@ -107,6 +130,7 @@ async fn list_rooms(
                         }
                     }),
                     unread_count: row.unread_count,
+                    member_last_seen,
                 }
             })
             .collect();

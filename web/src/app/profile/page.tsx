@@ -24,6 +24,8 @@ export default function ProfilePage() {
     location: "",
     skills: [],
     tag: null,
+    image: null,
+    banner: null,
     followers: 0,
     following: 0
   });
@@ -42,6 +44,8 @@ export default function ProfilePage() {
             location: data.user.location ?? "",
             skills: data.user.skills ?? [],
             tag: data.user.tag ?? null,
+            image: data.user.image ?? null,
+            banner: data.user.banner ?? null,
             followers: data.user.followers,
             following: data.user.following
           });
@@ -72,6 +76,8 @@ export default function ProfilePage() {
           location: updated.user.location ?? "",
           skills: updated.user.skills ?? [],
           tag: updated.user.tag ?? null,
+          image: updated.user.image ?? null,
+          banner: profile.banner,
           followers: profile.followers,
           following: profile.following,
         });
@@ -80,6 +86,26 @@ export default function ProfilePage() {
       // silently fail
     }
     setIsEditing(false);
+  };
+
+  const handleMediaUploaded = async (kind: "profile" | "banner", key: string) => {
+    try {
+      const res = await fetch("/api/profile/media", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(kind === "profile" ? { imageKey: key } : { bannerKey: key }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProfile((prev) => ({
+          ...prev,
+          image: kind === "profile" ? data.user.image : prev.image,
+          banner: kind === "banner" ? data.user.banner : prev.banner,
+        }));
+      }
+    } catch {
+      // silently fail; the object is uploaded but not linked
+    }
   };
 
   return (
@@ -92,10 +118,16 @@ export default function ProfilePage() {
       </button>
       <div className="profile-container w-full min-h-screen flex flex-col">
         <div className="banner-container w-full h-[25vh] bg-gradient-to-br from-primary/20 via-shade-background to-card">
-          <BannerUploader />
+          <BannerUploader
+            value={profile.banner}
+            onUploaded={(key) => handleMediaUploaded("banner", key)}
+          />
         </div>
         <div className="profile-info w-full h-[35vh] relative">
-          <ProfileImageUploader />
+          <ProfileImageUploader
+            value={profile.image}
+            onUploaded={(key) => handleMediaUploaded("profile", key)}
+          />
           <div className="part-1 w-full h-[30%] flex flex-col justify-center items-end gap-2 px-10">
             <div className="flex items-center gap-2 px-1.5">
               <p className="text-foreground">Current Role</p>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
+import { resolveStoredUrl } from "@/lib/storage";
 
 export async function GET(req: Request) {
   const userId = await getSessionUserId();
@@ -35,11 +36,14 @@ export async function GET(req: Request) {
     orderBy: { tag: "asc" },
   });
 
-  return NextResponse.json({
-    users: users.map(({ followers, following, ...user }) => ({
+  const resolved = await Promise.all(
+    users.map(async ({ followers, following, image, ...user }) => ({
       ...user,
+      image: await resolveStoredUrl(image),
       followers: Number(followers),
       following: Number(following),
     })),
-  });
+  );
+
+  return NextResponse.json({ users: resolved });
 }

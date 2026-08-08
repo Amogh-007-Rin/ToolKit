@@ -23,6 +23,7 @@ interface PublicUser {
   id: string;
   name: string | null;
   image: string | null;
+  banner: string | null;
   tag: string | null;
   bio: string | null;
   role: string | null;
@@ -153,7 +154,18 @@ export default function VisiterProfile() {
       </button>
 
       <div className="profile-container w-full min-h-screen flex flex-col">
-        <div className="banner-container w-full h-[25vh] bg-linear-to-br from-primary/20 via-shade-background to-card" />
+        <div className="banner-container w-full h-[25vh] bg-linear-to-br from-primary/20 via-shade-background to-card relative">
+          {user.banner ? (
+            <Image
+              src={user.banner}
+              alt="Banner"
+              fill
+              className="object-cover"
+              unoptimized
+              loading="eager"
+            />
+          ) : null}
+        </div>
 
         <div className="profile-info w-full h-[35vh] relative">
           <div className="w-40 h-40 flex flex-col rounded-full items-center justify-center absolute -top-20 left-25 z-10">
@@ -285,6 +297,7 @@ export default function VisiterProfile() {
                         fill
                         sizes="40vw"
                         quality={100}
+                        unoptimized
                         loading={index < 5 ? "eager" : "lazy"}
                         className="object-cover group-hover:opacity-90 transition-opacity"
                       />

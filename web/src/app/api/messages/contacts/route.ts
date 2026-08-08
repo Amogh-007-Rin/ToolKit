@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
+import { resolveStoredUrl } from "@/lib/storage";
 
 export async function GET(req: Request) {
   const userId = await getSessionUserId();
@@ -22,5 +23,9 @@ export async function GET(req: Request) {
     select: { id: true, name: true, image: true, tag: true },
   });
 
-  return NextResponse.json({ users });
+  const resolved = await Promise.all(
+    users.map(async (user) => ({ ...user, image: await resolveStoredUrl(user.image) })),
+  );
+
+  return NextResponse.json({ users: resolved });
 }

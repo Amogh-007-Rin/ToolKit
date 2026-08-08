@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
+import { resolveStoredUrl } from "@/lib/storage";
 
 export async function GET(req: Request) {
   const userId = await getSessionUserId();
@@ -24,7 +25,17 @@ export async function GET(req: Request) {
     prisma.notification.count({ where: { userId } }),
   ]);
 
-  return NextResponse.json({ notifications, unreadCount, totalCount });
+  const resolved = await Promise.all(
+    notifications.map(async (notification) => ({
+      ...notification,
+      actor: {
+        ...notification.actor,
+        image: await resolveStoredUrl(notification.actor.image),
+      },
+    })),
+  );
+
+  return NextResponse.json({ notifications: resolved, unreadCount, totalCount });
 }
 
 export async function PATCH() {

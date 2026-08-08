@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { commentCreateSchema } from "@/types/validation";
+import { resolveStoredUrl } from "@/lib/storage";
 
 const COMMENT_USER_SELECT = {
   id: true,
@@ -29,9 +30,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     orderBy: { createdAt: "asc" },
   });
 
-  return NextResponse.json({
-    comments: comments.map((c) => ({ ...c, mine: c.userId === userId })),
-  });
+  const resolved = await Promise.all(
+    comments.map(async (c) => ({
+      ...c,
+      mine: c.userId === userId,
+      user: { ...c.user, image: await resolveStoredUrl(c.user.image) },
+    })),
+  );
+
+  return NextResponse.json({ comments: resolved });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -64,7 +71,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     include: { user: { select: COMMENT_USER_SELECT } },
   });
 
-  return NextResponse.json({ comment: { ...comment, mine: true } }, { status: 201 });
+  return NextResponse.json(
+    {
+      comment: {
+        ...comment,
+        mine: true,
+        user: { ...comment.user, image: await resolveStoredUrl(comment.user.image) },
+      },
+    },
+    { status: 201 },
+  );
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {

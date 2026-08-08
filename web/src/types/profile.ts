@@ -8,6 +8,8 @@ export interface EditableProfile {
 }
 
 export interface ProfileData extends EditableProfile {
+  image: string | null;
+  banner: string | null;
   followers: number;
   following: number;
 }

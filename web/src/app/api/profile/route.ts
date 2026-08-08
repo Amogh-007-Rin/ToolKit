@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { profileUpdateSchema } from "@/types/validation";
+import { resolveStoredUrl } from "@/lib/storage";
 import { Prisma } from "../../../../generated/prisma/client";
 
 export async function GET() {
@@ -17,6 +18,7 @@ export async function GET() {
       name: true,
       email: true,
       image: true,
+      banner: true,
       bio: true,
       role: true,
       location: true,
@@ -31,9 +33,16 @@ export async function GET() {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
+  const [image, banner] = await Promise.all([
+    resolveStoredUrl(user.image),
+    resolveStoredUrl(user.banner),
+  ]);
+
   return NextResponse.json({
     user: {
       ...user,
+      image,
+      banner,
       followers: Number(user.followers),
       following: Number(user.following),
     },
@@ -80,7 +89,7 @@ export async function PATCH(req: Request) {
       },
     });
 
-    return NextResponse.json({ user });
+    return NextResponse.json({ user: { ...user, image: await resolveStoredUrl(user.image) } });
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

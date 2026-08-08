@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "@/styles/globals.css";
 import { ThemeProvider } from "@/lib/ThemeProvider";
 import { Providers } from "@/lib/Providers";
+import SmoothScroll from "@/lib/SmoothScroll";
 
 const toolKitFont = localFont({
   src: './fonts/toolkit-font.woff2',
@@ -26,11 +27,13 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <Providers>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            {children}
-          </ThemeProvider>
-        </Providers>
+        <SmoothScroll>
+          <Providers>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              {children}
+            </ThemeProvider>
+          </Providers>
+        </SmoothScroll>
       </body>
     </html>
   );

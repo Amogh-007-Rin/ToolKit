@@ -12,6 +12,7 @@ model User {
   email         String       @unique
   name          String?
   image         String?
+  banner        String?
   emailVerified DateTime?
   password      String?
   bio           String?

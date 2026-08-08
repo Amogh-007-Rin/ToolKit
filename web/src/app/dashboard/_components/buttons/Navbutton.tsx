@@ -11,6 +11,7 @@ interface NavbuttonProps {
     iconClassName?: string;
     isActive?: boolean;
     hover?: "gear";
+    badge?: number;
 };
 
 const ICON_HOVER: Record<string, Variants> = {
@@ -20,7 +21,7 @@ const ICON_HOVER: Record<string, Variants> = {
     },
 };
 
-export default function Navbutton({ tag, icon, className, onClick, iconClassName, isActive, hover }: NavbuttonProps) {
+export default function Navbutton({ tag, icon, className, onClick, iconClassName, isActive, hover, badge }: NavbuttonProps) {
     const Icon = icon;
 
     return (
@@ -47,6 +48,16 @@ export default function Navbutton({ tag, icon, className, onClick, iconClassName
                 >
                     <Icon className={iconClassName ?? (isActive ? "text-background" : "text-foreground")} strokeWidth={2} size={20} />
                 </motion.span>
+            ) : null}
+            {badge !== undefined && badge > 0 ? (
+              <motion.span
+                className="absolute top-0 right-0 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center z-20"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 500, damping: 25 }}
+              >
+                {badge > 99 ? "99+" : badge}
+              </motion.span>
             ) : null}
         </motion.button>
     );

@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { House, Kayak, LayoutDashboard, MessagesSquare, Settings, Sparkles } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import AnimatedLogo from "./AnimatedLogo";
 import Navbutton from "./buttons/Navbutton";
 import NotificationPanel from "./NotificationPanel";
 import Profilebutton from "@/components/ui/buttons/Profilebutton";
 import Notificationbutton from "@/components/ui/buttons/Notificationbutton";
 import SignoutButton from "@/components/ui/buttons/Signoutbutton";
+import { messagingSocket, listRooms } from "@/services/messaging";
 
 const navItems: { icon: typeof House; route: string; hover?: "gear" }[] = [
   { icon: House, route: "/dashboard" },
@@ -25,27 +27,57 @@ export default function Sidebar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [messageUnread, setMessageUnread] = useState(0);
+  const { data: session } = useSession();
+  const meId = session?.user?.id;
 
   const fetchUnreadCount = useCallback(async () => {
     try {
       const res = await fetch("/api/notifications");
       if (res.ok) {
         const data = await res.json();
-        setUnreadCount(data.totalCount ?? 0);
+        setUnreadCount(data.unreadCount ?? 0);
       }
     } catch {
       // silently fail
     }
   }, []);
 
+  const fetchMessageUnread = useCallback(async () => {
+    try {
+      const { rooms } = await listRooms();
+      const count = rooms.reduce((sum, room) => sum + (room.unreadCount ?? 0), 0);
+      setMessageUnread(count);
+    } catch {
+      // silently fail
+    }
+  }, []);
+
   useEffect(() => {
-    const initial = setTimeout(fetchUnreadCount, 0);
-    const interval = setInterval(fetchUnreadCount, 30000);
+    const initial = setTimeout(() => {
+      fetchUnreadCount();
+      fetchMessageUnread();
+    }, 0);
+    const interval = setInterval(() => {
+      fetchUnreadCount();
+      fetchMessageUnread();
+    }, 10_000);
     return () => {
       clearTimeout(initial);
       clearInterval(interval);
     };
-  }, [fetchUnreadCount]);
+  }, [fetchUnreadCount, fetchMessageUnread]);
+
+  useEffect(() => {
+    const unsub = messagingSocket.onEvent((event) => {
+      if (event.type === "message" && event.message.senderId !== meId) {
+        setMessageUnread((prev) => prev + 1);
+      } else if (event.type === "connect") {
+        fetchMessageUnread();
+      }
+    });
+    return unsub;
+  }, [meId, fetchMessageUnread]);
 
   const handleSignOut = async () => {
     if (isSigningOut) return;
@@ -91,6 +123,7 @@ export default function Sidebar() {
             isActive={pathname === item.route}
             hover={item.hover}
             iconClassName={pathname === item.route ? "text-background" : "text-sidebar-foreground"}
+            badge={item.route === "/dashboard/messages" ? messageUnread : undefined}
           />
         ))}
       </div>

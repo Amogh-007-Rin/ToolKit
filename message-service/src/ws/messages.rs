@@ -1,8 +1,11 @@
-use crate::db::models::Message;
+use crate::db::models::{Attachment, Message};
 use serde::{Deserialize, Serialize};
 
 pub const MAX_CONTENT_LEN: usize = 4000;
 pub const MAX_ID_LEN: usize = 100;
+pub const MAX_ATTACHMENTS: usize = 10;
+pub const MAX_ATTACHMENT_KEY_LEN: usize = 500;
+pub const MAX_ATTACHMENT_NAME_LEN: usize = 255;
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
@@ -17,6 +20,8 @@ pub enum ClientEvent {
         #[serde(default)]
         temp_id: Option<String>,
         content: String,
+        #[serde(default)]
+        attachments: Vec<Attachment>,
     },
     #[serde(rename_all = "camelCase")]
     TypingStart { room_id: String },
@@ -52,6 +57,13 @@ pub enum ServerEvent {
     TypingStop { room_id: String, user_id: String },
     #[serde(rename_all = "camelCase")]
     Error { code: String, message: String },
+    #[serde(rename_all = "camelCase")]
+    UserOnline { user_id: String },
+    #[serde(rename_all = "camelCase")]
+    UserOffline {
+        user_id: String,
+        last_seen_at: String,
+    },
 }
 
 impl ServerEvent {

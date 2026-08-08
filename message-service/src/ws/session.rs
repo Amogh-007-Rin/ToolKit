@@ -1,7 +1,11 @@
 use crate::db;
 use crate::state::{AppState, ConnId, Outgoing};
-use crate::ws::messages::{ClientEvent, MAX_CONTENT_LEN, MAX_ID_LEN, ServerEvent};
+use crate::ws::messages::{
+    ClientEvent, MAX_ATTACHMENT_KEY_LEN, MAX_ATTACHMENT_NAME_LEN, MAX_ATTACHMENTS, MAX_CONTENT_LEN,
+    MAX_ID_LEN, ServerEvent,
+};
 use axum::extract::ws::{Message, WebSocket};
+use chrono::Utc;
 use futures_util::{SinkExt, StreamExt};
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
@@ -77,7 +81,31 @@ pub async fn run(state: AppState, socket: WebSocket, conn_id: ConnId, user_id: S
         }
     }
 
+    let rooms_before_disconnect: Vec<String> = state
+        .sessions
+        .get(&conn_id)
+        .map(|s| s.rooms.iter().map(|r| r.clone()).collect())
+        .unwrap_or_default();
+
     state.remove_session(conn_id);
+
+    let has_other_connections = state
+        .sessions
+        .iter()
+        .any(|entry| entry.value().user_id == user_id);
+    if !has_other_connections {
+        let last_seen = Utc::now().to_rfc3339();
+        for room in &rooms_before_disconnect {
+            state.deliver_to_room(
+                room,
+                ServerEvent::UserOffline {
+                    user_id: user_id.clone(),
+                    last_seen_at: last_seen.clone(),
+                },
+            );
+        }
+    }
+
     send_task.abort();
 }
 
@@ -114,8 +142,27 @@ async fn handle_client_event(state: &AppState, conn_id: ConnId, text: &str) {
             }
             match db::is_member(&state.db, &room_id, &user_id).await {
                 Ok(true) => {
+                    let is_first_room = state
+                        .sessions
+                        .get(&conn_id)
+                        .map(|s| s.rooms.is_empty())
+                        .unwrap_or(true);
                     state.join_room(conn_id, &room_id);
-                    state.send_to_conn(conn_id, ServerEvent::Joined { room_id });
+                    state.touch_user(&user_id);
+                    state.send_to_conn(
+                        conn_id,
+                        ServerEvent::Joined {
+                            room_id: room_id.clone(),
+                        },
+                    );
+                    if is_first_room {
+                        state.deliver_to_room(
+                            &room_id,
+                            ServerEvent::UserOnline {
+                                user_id: user_id.clone(),
+                            },
+                        );
+                    }
                 }
                 Ok(false) => {
                     send_error(
@@ -138,8 +185,18 @@ async fn handle_client_event(state: &AppState, conn_id: ConnId, text: &str) {
             room_id,
             temp_id,
             content,
+            attachments,
         } => {
-            handle_send_message(state, conn_id, &user_id, room_id, temp_id, content).await;
+            handle_send_message(
+                state,
+                conn_id,
+                &user_id,
+                room_id,
+                temp_id,
+                content,
+                attachments,
+            )
+            .await;
         }
         ClientEvent::TypingStart { room_id } => {
             handle_typing(state, conn_id, &user_id, room_id, true).await;
@@ -189,6 +246,7 @@ async fn handle_send_message(
     room_id: String,
     temp_id: Option<String>,
     content: String,
+    attachments: Vec<db::models::Attachment>,
 ) {
     if !valid_id(&room_id) {
         ack_failure(
@@ -206,8 +264,30 @@ async fn handle_send_message(
         ack_failure(state, conn_id, &room_id, Some(temp_id), "invalid temp id");
         return;
     }
+    if attachments.len() > MAX_ATTACHMENTS {
+        ack_failure(
+            state,
+            conn_id,
+            &room_id,
+            temp_id.as_deref(),
+            "too many attachments",
+        );
+        return;
+    }
+    for attachment in &attachments {
+        if !valid_attachment(attachment) {
+            ack_failure(
+                state,
+                conn_id,
+                &room_id,
+                temp_id.as_deref(),
+                "invalid attachment",
+            );
+            return;
+        }
+    }
     let content = content.trim();
-    if content.is_empty() {
+    if content.is_empty() && attachments.is_empty() {
         ack_failure(
             state,
             conn_id,
@@ -258,6 +338,7 @@ async fn handle_send_message(
         &room_id,
         user_id,
         content,
+        &attachments,
     )
     .await
     {
@@ -325,4 +406,19 @@ fn send_error(state: &AppState, conn_id: ConnId, code: &str, message: String) {
 
 fn valid_id(id: &str) -> bool {
     !id.is_empty() && id.len() <= MAX_ID_LEN
+}
+
+fn valid_attachment(attachment: &db::models::Attachment) -> bool {
+    if attachment.key.is_empty() || attachment.key.len() > MAX_ATTACHMENT_KEY_LEN {
+        return false;
+    }
+    if attachment.kind != "image" && attachment.kind != "video" {
+        return false;
+    }
+    if let Some(name) = attachment.name.as_deref()
+        && name.len() > MAX_ATTACHMENT_NAME_LEN
+    {
+        return false;
+    }
+    true
 }

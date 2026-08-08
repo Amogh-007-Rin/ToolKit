@@ -6,6 +6,7 @@ use models::{Message, Room, RoomMember, RoomSummaryRow};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
+use sqlx::types::Json;
 
 pub async fn connect(url: &str) -> Result<PgPool, AppError> {
     Ok(PgPoolOptions::new()
@@ -129,7 +130,8 @@ pub async fn list_messages(
     limit: i64,
 ) -> Result<Vec<Message>, AppError> {
     let mut rows = sqlx::query_as::<_, Message>(
-        "SELECT id, room_id, sender_id, content, created_at, edited_at, deleted_at
+        "SELECT id, room_id, sender_id, content, COALESCE(attachments, '[]'::jsonb) AS attachments,
+                created_at, edited_at, deleted_at
          FROM messages
          WHERE room_id = $1 AND deleted_at IS NULL AND ($2::timestamptz IS NULL OR created_at < $2)
          ORDER BY created_at DESC
@@ -150,16 +152,19 @@ pub async fn insert_message(
     room_id: &str,
     sender_id: &str,
     content: &str,
+    attachments: &[models::Attachment],
 ) -> Result<Message, AppError> {
     let message = sqlx::query_as::<_, Message>(
-        "INSERT INTO messages (id, room_id, sender_id, content)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, room_id, sender_id, content, created_at, edited_at, deleted_at",
+        "INSERT INTO messages (id, room_id, sender_id, content, attachments)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, room_id, sender_id, content, COALESCE(attachments, '[]'::jsonb) AS attachments,
+                   created_at, edited_at, deleted_at",
     )
     .bind(id)
     .bind(room_id)
     .bind(sender_id)
     .bind(content)
+    .bind(Json(attachments))
     .fetch_one(pool)
     .await?;
     Ok(message)

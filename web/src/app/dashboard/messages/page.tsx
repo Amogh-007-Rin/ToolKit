@@ -15,11 +15,17 @@ import {
   type RoomListItem,
 } from "@/services/messaging";
 import RoomList from "./_components/RoomList";
-import Conversation from "./_components/Conversation";
+import Conversation, { type OutgoingMedia } from "./_components/Conversation";
 
 interface TempMessage {
   tempId: string;
   content: string;
+  attachments: {
+    key: string | null;
+    kind: "image" | "video";
+    name?: string | null;
+    previewUrl: string;
+  }[];
   createdAt: string;
 }
 
@@ -45,6 +51,8 @@ function MessagesApp() {
   const [messagesByRoom, setMessagesByRoom] = useState<Record<string, Message[]>>({});
   const [tempMessages, setTempMessages] = useState<TempMessage[]>([]);
   const [typingByRoom, setTypingByRoom] = useState<Record<string, Record<string, boolean>>>({});
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [lastSeenMap, setLastSeenMap] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<ConnStatus>("connecting");
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +62,23 @@ function MessagesApp() {
 
   const TYPING_EXPIRE_MS = 7000;
 
+  const seedPresenceFromRooms = (roomList: RoomListItem[]) => {
+    const online = new Set<string>();
+    const lastSeen: Record<string, string> = {};
+    for (const room of roomList) {
+      for (const memberId of room.members) {
+        const status = room.memberLastSeen[memberId];
+        if (status === null) {
+          online.add(memberId);
+        } else if (status !== undefined) {
+          lastSeen[memberId] = status;
+        }
+      }
+    }
+    setOnlineUsers(online);
+    setLastSeenMap(lastSeen);
+  };
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -61,6 +86,7 @@ function MessagesApp() {
         const { rooms: next } = await listRooms();
         if (!cancelled) {
           setRooms(next);
+          seedPresenceFromRooms(next);
         }
       } catch {
         if (!cancelled) {
@@ -147,7 +173,7 @@ function MessagesApp() {
                   lastMessage: {
                     id: event.message.id,
                     senderId: event.message.senderId,
-                    content: event.message.content,
+                    content: event.message.content || "[media]",
                     createdAt: event.message.createdAt,
                   },
                   unreadCount:
@@ -208,11 +234,21 @@ function MessagesApp() {
         }
       } else if (event.type === "error") {
         setError(event.message);
+      } else if (event.type === "userOnline") {
+        setOnlineUsers((prev) => new Set(prev).add(event.userId));
+      } else if (event.type === "userOffline") {
+        setOnlineUsers((prev) => {
+          const next = new Set(prev);
+          next.delete(event.userId);
+          return next;
+        });
+        setLastSeenMap((prev) => ({ ...prev, [event.userId]: event.lastSeenAt }));
       } else if (event.type === "connect") {
         async function reload() {
           try {
             const { rooms: next } = await listRooms();
             setRooms(next);
+            seedPresenceFromRooms(next);
             const roomId = activeRoomRef.current;
             if (roomId) {
               messagingSocket.send({ type: "joinRoom", roomId });
@@ -259,14 +295,27 @@ function MessagesApp() {
   }, [userParam, router]);
 
   const sendMessage = useCallback(
-    (content: string) => {
+    (content: string, attachments: OutgoingMedia[]) => {
       const roomId = activeRoomRef.current;
       if (!roomId) {
         return;
       }
       const tempId = crypto.randomUUID();
       const now = new Date().toISOString();
-      setTempMessages((prev) => [...prev, { tempId, content, createdAt: now }]);
+      setTempMessages((prev) => [
+        ...prev,
+        {
+          tempId,
+          content,
+          attachments: attachments.map(({ key, kind, name, previewUrl }) => ({
+            key,
+            kind,
+            name,
+            previewUrl,
+          })),
+          createdAt: now,
+        },
+      ]);
       setRooms((prev) =>
         prev.map((room) =>
           room.id === roomId
@@ -275,7 +324,7 @@ function MessagesApp() {
                 lastMessage: {
                   id: tempId,
                   senderId: meId,
-                  content,
+                  content: content || "[media]",
                   createdAt: now,
                 },
                 unreadCount: 0,
@@ -283,7 +332,13 @@ function MessagesApp() {
             : room,
         ),
       );
-      messagingSocket.send({ type: "sendMessage", roomId, tempId, content });
+      messagingSocket.send({
+        type: "sendMessage",
+        roomId,
+        tempId,
+        content,
+        attachments: attachments.map(({ key, kind, name }) => ({ key, kind, name })),
+      });
     },
     [meId],
   );
@@ -312,6 +367,7 @@ function MessagesApp() {
           members: [],
           lastMessage: null,
           unreadCount: 0,
+          memberLastSeen: {},
         }
       : null);
   const activeMemberId = activeRoom?.members.find((memberId) => memberId !== meId);
@@ -338,6 +394,8 @@ function MessagesApp() {
         typingUsers={activeTypingUserIds}
         status={status}
         error={error}
+        onlineUsers={onlineUsers}
+        lastSeenMap={lastSeenMap}
         onSend={sendMessage}
         onTypingChange={sendTyping}
       />

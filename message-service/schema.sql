@@ -24,5 +24,7 @@ CREATE TABLE IF NOT EXISTS messages (
     deleted_at TIMESTAMPTZ
 );
 
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachments JSONB NOT NULL DEFAULT '[]'::jsonb;
+
 CREATE INDEX IF NOT EXISTS idx_messages_room_created ON messages (room_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_room_members_user ON room_members (user_id);

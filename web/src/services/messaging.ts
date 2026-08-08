@@ -13,9 +13,16 @@ export interface Message {
   roomId: string;
   senderId: string;
   content: string;
+  attachments: Attachment[];
   createdAt: string;
   editedAt: string | null;
   deletedAt: string | null;
+}
+
+export interface Attachment {
+  key: string;
+  kind: "image" | "video";
+  name?: string | null;
 }
 
 export interface MessagePreview {
@@ -37,12 +44,19 @@ export interface RoomListItem extends Room {
   members: string[];
   lastMessage: MessagePreview | null;
   unreadCount: number;
+  memberLastSeen: Record<string, string | null>;
 }
 
 export type ClientEvent =
   | { type: "joinRoom"; roomId: string }
   | { type: "leaveRoom"; roomId: string }
-  | { type: "sendMessage"; roomId: string; tempId?: string; content: string }
+  | {
+      type: "sendMessage";
+      roomId: string;
+      tempId?: string;
+      content: string;
+      attachments?: Attachment[];
+    }
   | { type: "typingStart"; roomId: string }
   | { type: "typingStop"; roomId: string };
 
@@ -61,7 +75,9 @@ export type ServerEvent =
     }
   | { type: "typingStart"; roomId: string; userId: string }
   | { type: "typingStop"; roomId: string; userId: string }
-  | { type: "error"; code: string; message: string };
+  | { type: "error"; code: string; message: string }
+  | { type: "userOnline"; userId: string }
+  | { type: "userOffline"; userId: string; lastSeenAt: string };
 
 export type ConnStatus = "connecting" | "open" | "reconnecting" | "offline";
 

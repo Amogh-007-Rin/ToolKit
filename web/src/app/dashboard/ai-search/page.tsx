@@ -6,7 +6,6 @@ import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
   ArrowUp,
-  Sparkles,
   Loader2,
   ExternalLink,
   BookmarkPlus,
@@ -17,6 +16,7 @@ import {
 import { TOOL_ICONS } from "../_components/tool-icons";
 import AnimatedLogo from "../_components/AnimatedLogo";
 import OrbLoader from "@/components/ui/loaders/OrbLoader";
+import { DotMatrix } from "@/components/assistant-ui/dot-matrix";
 import CollapsibleSidebar, {
   type ChatMeta,
 } from "../_components/CollapsibleSidebar";
@@ -247,10 +247,10 @@ export default function AISearchPage() {
           {messages.length === 0 ? (
             <div className="h-full min-h-[50vh] flex flex-col items-center justify-center gap-8">
               <div className="flex flex-col items-center gap-4 text-center">
-                <h2 className="text-2xl text-foreground font-medium">
+                <h2 className="text-2xl text-foreground font-light leading-1.5 tracking-wide">
                   What kind of tools should i find you today ?
                 </h2>
-                <p className="text-sm text-muted-foreground max-w-md">
+                <p className="text-sm text-muted-foreground max-w-md font-thin">
                   Describe what you need 
                   Toolkit AI searches the web for tools and lets
                   you save them to directly your collections
@@ -261,7 +261,7 @@ export default function AISearchPage() {
                   <button
                     key={suggestion}
                     onClick={() => send(suggestion)}
-                    className="text-left px-4 py-3 rounded-2xl bg-card border border-border text-sm text-foreground/80 hover:border-primary/40 hover:bg-muted/40 transition-colors cursor-pointer"
+                    className="text-left px-4 py-3 rounded-2xl bg-card border border-border text-sm text-foreground/80 hover:border-theme-button-insider/20 hover:bg-muted/40 transition-colors cursor-pointer"
                   >
                     {suggestion}
                   </button>
@@ -285,7 +285,13 @@ export default function AISearchPage() {
                   onGoToTools={() => router.push("/dashboard/tools")}
                 />
               ))}
-              {loading && <TypingIndicator />}
+              {loading && (
+                <div className="flex items-start py-4">
+                  <div className="flex items-center justify-center h-14 w-14 px-4 rounded-2xl">
+                    <DotMatrix state="thinking" className="size-10"/>
+                  </div>
+                </div>
+              )}
             </>
           )}
           <div ref={bottomRef} />
@@ -398,9 +404,6 @@ function MessageBubble({
 
   return (
     <div className="flex items-start gap-2.5 py-4">
-      <div className="w-8 h-8 rounded-full bg-linear-to-br from-primary/30 to-primary/5 flex items-center justify-center shrink-0 mt-1">
-        <Sparkles size={14} className="text-primary" />
-      </div>
       <div className="min-w-0 flex-1 space-y-3">
         {message.error ? (
           <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
@@ -411,7 +414,7 @@ function MessageBubble({
           <>
             <p className="text-sm text-muted-foreground">
               Here are {message.results.length} tool
-              {message.results.length === 1 ? "" : "s"} that fit your request
+              {message.results.length === 1 ? "" : "s"} that fit your requirements
             </p>
             <div className="space-y-2.5">
               {message.results.map((result) => {
@@ -452,7 +455,6 @@ function MessageBubble({
                         )}
                         {result.reason && (
                           <p className="text-[13px] text-muted-foreground/80 mt-1.5 flex items-start gap-1.5">
-                            <Sparkles size={12} className="text-primary shrink-0 mt-0.5" />
                             <span>{result.reason}</span>
                           </p>
                         )}
@@ -520,25 +522,6 @@ function MessageBubble({
             No tools found for your request. Try describing it differently.
           </p>
         )}
-      </div>
-    </div>
-  );
-}
-
-function TypingIndicator() {
-  return (
-    <div className="flex items-start gap-2.5 py-4">
-      <div className="w-8 h-8 rounded-full bg-linear-to-br from-primary/30 to-primary/5 flex items-center justify-center shrink-0 mt-1">
-        <Sparkles size={14} className="text-primary" />
-      </div>
-      <div className="flex items-center gap-1.5 h-9 px-4 bg-card rounded-2xl border border-border">
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce"
-            style={{ animationDelay: `${i * 150}ms` }}
-          />
-        ))}
       </div>
     </div>
   );

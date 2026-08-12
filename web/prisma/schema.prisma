@@ -31,6 +31,7 @@ model User {
   followersRel  Follow[] @relation("UserFollowers")
   notifications Notification[] @relation("UserNotifications")
   notifiedActions Notification[] @relation("UserNotificationActors")
+  aiChats       AIChat[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   followers     BigInt       @default(0)
@@ -172,4 +173,29 @@ model Session {
   userId       String
   expires      DateTime
   user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AIChat {
+  id        String         @id @default(cuid())
+  userId    String
+  title     String         @default("New chat")
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  AIChatMessage[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+model AIChatMessage {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      AIChat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role      String
+  content   String   @default("")
+  results   Json?
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([chatId])
 }

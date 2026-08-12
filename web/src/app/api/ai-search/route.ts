@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 
 const MODEL = "gemini-3.1-flash-lite";
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { query?: string };
+  let body: { query?: string; chatId?: string };
   try {
     body = await req.json();
   } catch {
@@ -102,8 +103,42 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Query is too long" }, { status: 400 });
   }
 
+  const chatId = body.chatId?.trim() || null;
+  if (chatId) {
+    const chat = await prisma.aIChat.findFirst({
+      where: { id: chatId, userId },
+      select: { id: true },
+    });
+    if (!chat) {
+      return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+    }
+  }
+
+  const persistTurn = async (results: AIResult[] | null, error: string | null) => {
+    if (!chatId) return;
+    await prisma.$transaction([
+      prisma.aIChatMessage.create({
+        data: { chatId, role: "user", content: query },
+      }),
+      prisma.aIChatMessage.create({
+        data: {
+          chatId,
+          role: "assistant",
+          content: "",
+          results: results ? (results as unknown as object) : undefined,
+          error,
+        },
+      }),
+      prisma.aIChat.update({
+        where: { id: chatId },
+        data: { updatedAt: new Date() },
+      }),
+    ]);
+  };
+
   const cached = cache.get(query);
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+    await persistTurn(cached.results, null);
     return NextResponse.json({ results: cached.results });
   }
 
@@ -127,6 +162,7 @@ export async function POST(req: Request) {
   } catch (error) {
     if (!isRateLimited(error)) {
       const message = error instanceof Error ? error.message : "AI search failed";
+      await persistTurn(null, message);
       return NextResponse.json({ error: message }, { status: 502 });
     }
     try {
@@ -134,6 +170,7 @@ export async function POST(req: Request) {
     } catch (fallbackError) {
       const message =
         fallbackError instanceof Error ? fallbackError.message : "AI search failed";
+      await persistTurn(null, message);
       return NextResponse.json({ error: message }, { status: 502 });
     }
   }
@@ -142,7 +179,9 @@ export async function POST(req: Request) {
   try {
     results = parseResults(response.text ?? "");
   } catch {
-    return NextResponse.json({ error: "AI returned an unparseable response" }, { status: 502 });
+    const message = "AI returned an unparseable response";
+    await persistTurn(null, message);
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 
   if (cache.size >= CACHE_MAX) {
@@ -150,6 +189,8 @@ export async function POST(req: Request) {
     if (oldest) cache.delete(oldest);
   }
   cache.set(query, { at: Date.now(), results });
+
+  await persistTurn(results, null);
 
   return NextResponse.json({ results });
 }

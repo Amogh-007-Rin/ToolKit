@@ -17,7 +17,7 @@ const PARTICLES = Array.from({ length: PARTICLE_COUNT }, (_, i) => {
   };
 });
 
-export default function AnimatedLogo() {
+export default function AnimatedLogo({ size = 42 }: { size?: number }) {
   const [scope, animate] = useAnimate();
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -63,11 +63,12 @@ export default function AnimatedLogo() {
   return (
     <div
       ref={scope}
-      className="relative w-10.5 h-10.5 flex items-center justify-center cursor-pointer"
+      style={{ width: size, height: size }}
+      className="relative flex items-center justify-center cursor-pointer"
       onMouseEnter={handleHover}
     >
       <motion.div id="logo-icon" className="absolute">
-        <Spool strokeWidth={1} className="text-foreground" size={42} />
+        <Spool strokeWidth={1} className="text-foreground" size={size} />
       </motion.div>
       {PARTICLES.map((p) => (
         <motion.div

@@ -242,7 +242,7 @@ export default function VisiterProfile() {
                   <p className="text-foreground">This is you</p>
                 </button>
               ) : (
-                <div className="absolute left-27 h-full flex items-center gap-2">
+                <div className="absolute left-27 h-full flex items-center gap-2 w-75">
                   <Multibutton
                     tag="follow-profile"
                     label={user.followedByMe ? "Following" : "Follow"}
@@ -250,7 +250,7 @@ export default function VisiterProfile() {
                     onClick={toggleFollow}
                     className={`h-[30%] rounded-4xl ${
                       user.followedByMe ? "bg-foreground text-card" : ""
-                    }`}
+                    } w-[50%]`}
                     iconClassName={user.followedByMe ? "text-card" : "text-foreground"}
                     textClassName={user.followedByMe ? "text-card" : "text-foreground"}
                   />
@@ -259,7 +259,7 @@ export default function VisiterProfile() {
                     label="Message"
                     icon={MessageCircle}
                     onClick={() => router.push(`/dashboard/messages?user=${user.id}`)}
-                    className="h-[30%] rounded-4xl bg-foreground text-card"
+                    className="h-[30%] rounded-4xl bg-foreground text-card w-[50%]"
                     iconClassName="text-card"
                     textClassName="text-card"
                   />

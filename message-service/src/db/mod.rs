@@ -5,13 +5,17 @@ use chrono::{DateTime, Utc};
 use models::{Message, Room, RoomMember, RoomSummaryRow};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::types::Json;
+use std::str::FromStr;
+
+const SCHEMA: &str = "messaging";
 
 pub async fn connect(url: &str) -> Result<PgPool, AppError> {
+    let options = PgConnectOptions::from_str(url)?.options([("search_path", SCHEMA)]);
     Ok(PgPoolOptions::new()
         .max_connections(32)
-        .connect(url)
+        .connect_with(options)
         .await?)
 }
 

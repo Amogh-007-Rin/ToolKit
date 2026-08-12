@@ -1,3 +1,6 @@
+CREATE SCHEMA IF NOT EXISTS messaging;
+SET search_path TO messaging;
+
 CREATE TABLE IF NOT EXISTS rooms (
     id         TEXT PRIMARY KEY,
     kind       TEXT NOT NULL DEFAULT 'direct',

@@ -114,7 +114,7 @@ export default function ExplorePage() {
                 >
                   <div className="w-14 h-14 rounded-full bg-shade-background flex items-center justify-center text-lg font-semibold text-foreground shrink-0 overflow-hidden">
                     {user.image ? (
-                      <Image src={user.image} alt={user.name || "User"} width={56} height={56} className="w-full h-full object-cover" />
+                      <Image src={user.image} alt={user.name || "User"} width={56} height={56} unoptimized className="w-full h-full object-cover" />
                     ) : (
                       (user.name || "U").charAt(0).toUpperCase()
                     )}

@@ -288,7 +288,7 @@ export default function AISearchPage() {
               {loading && (
                 <div className="flex items-start py-4">
                   <div className="flex items-center justify-center h-14 w-14 px-4 rounded-2xl">
-                    <DotMatrix state="thinking" className="size-10"/>
+                    <DotMatrix state="loading" className="size-10"/>
                   </div>
                 </div>
               )}

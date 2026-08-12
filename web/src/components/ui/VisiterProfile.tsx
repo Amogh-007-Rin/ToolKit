@@ -237,18 +237,18 @@ export default function VisiterProfile() {
               {user.isMe ? (
                 <button
                   onClick={() => router.push("/profile")}
-                  className="absolute left-27 w-[25%] h-[30%] rounded-4xl bg-card flex items-center justify-center cursor-pointer"
+                  className="absolute left-27 h-[30%] rounded-4xl bg-card flex items-center justify-center px-5 cursor-pointer"
                 >
                   <p className="text-foreground">This is you</p>
                 </button>
               ) : (
-                <>
+                <div className="absolute left-27 h-full flex items-center gap-2">
                   <Multibutton
                     tag="follow-profile"
                     label={user.followedByMe ? "Following" : "Follow"}
                     icon={user.followedByMe ? Check : UserPlus}
                     onClick={toggleFollow}
-                    className={`absolute left-27 w-[25%] h-[30%] rounded-4xl ${
+                    className={`h-[30%] rounded-4xl ${
                       user.followedByMe ? "bg-foreground text-card" : ""
                     }`}
                     iconClassName={user.followedByMe ? "text-card" : "text-foreground"}
@@ -259,11 +259,11 @@ export default function VisiterProfile() {
                     label="Message"
                     icon={MessageCircle}
                     onClick={() => router.push(`/dashboard/messages?user=${user.id}`)}
-                    className="absolute left-57 w-[25%] h-[30%] rounded-4xl bg-foreground text-card"
+                    className="h-[30%] rounded-4xl bg-foreground text-card"
                     iconClassName="text-card"
                     textClassName="text-card"
                   />
-                </>
+                </div>
               )}
             </div>
             <div className="right-part w-[70%] h-full flex items-start justify-end px-10 py-2 gap-2">

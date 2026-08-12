@@ -170,18 +170,20 @@ export default function ProfilePage() {
           </div>
           <div className="part-5 w-full h-[28%] flex items-center">
             <div className="left-part w-[30%] h-full flex items-center relative">
-              <Multibutton
-                tag="edit-profile"
-                label="Edit Profile"
-                onClick={() => setIsEditing(true)}
-                className="absolute left-27 w-[25%] h-[30%] rounded-4xl"
-              />
-              <Multibutton
-                tag="share-profile"
-                label="Share Profile"
-                onClick={() => setIsSharing(true)}
-                className="absolute left-57 w-[25%] h-[30%] rounded-4xl bg-foreground text-card"
-              />
+              <div className="absolute left-27 h-full flex items-center gap-2 w-75">
+                <Multibutton
+                  tag="edit-profile"
+                  label="Edit Profile"
+                  onClick={() => setIsEditing(true)}
+                  className="h-[30%] rounded-4xl w-[50%]"
+                />
+                <Multibutton
+                  tag="share-profile"
+                  label="Share Profile"
+                  onClick={() => setIsSharing(true)}
+                  className="h-[30%] rounded-4xl bg-foreground text-card w-[50%]"
+                />
+              </div>
             </div>
             <div className="right-part w-[70%] h-full flex items-start justify-end px-10 py-2 gap-2">
               {profile.skills.length > 0

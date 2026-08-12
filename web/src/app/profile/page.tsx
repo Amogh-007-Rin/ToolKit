@@ -117,7 +117,7 @@ export default function ProfilePage() {
         <ArrowLeft size={20} className="text-foreground" />
       </button>
       <div className="profile-container w-full min-h-screen flex flex-col">
-        <div className="banner-container w-full h-[25vh] bg-gradient-to-br from-primary/20 via-shade-background to-card">
+        <div className="banner-container w-full h-[25vh] bg-linear-to-br from-primary/20 via-shade-background to-card">
           <BannerUploader
             value={profile.banner}
             onUploaded={(key) => handleMediaUploaded("banner", key)}

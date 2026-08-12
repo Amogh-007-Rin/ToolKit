@@ -6,6 +6,13 @@ import { getSessionUserId } from "@/lib/session";
 const MODEL = "gemini-3.1-flash-lite";
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_MAX = 50;
+// Google web search grounding is a paid, quota-gated feature that is not
+// available on all API keys (the ungrounded fallback silently costs a full
+// failed request + latency on every call). Opt in explicitly with:
+// GEMINI_WEB_SEARCH=true
+const GROUNDING_ENABLED = process.env.GEMINI_WEB_SEARCH === "true";
+const RATE_LIMIT_MESSAGE =
+  "AI search is rate-limited right now. Please wait a minute and try again.";
 
 interface AIResult {
   name: string;
@@ -157,21 +164,36 @@ export async function POST(req: Request) {
     });
 
   let response;
-  try {
-    response = await call(true);
-  } catch (error) {
-    if (!isRateLimited(error)) {
-      const message = error instanceof Error ? error.message : "AI search failed";
+  if (!GROUNDING_ENABLED) {
+    try {
+      response = await call(false);
+    } catch (error) {
+      const fallbackMessage =
+        error instanceof Error ? error.message : "AI search failed";
+      const message = isRateLimited(error) ? RATE_LIMIT_MESSAGE : fallbackMessage;
       await persistTurn(null, message);
       return NextResponse.json({ error: message }, { status: 502 });
     }
+  } else {
     try {
-      response = await call(false);
-    } catch (fallbackError) {
-      const message =
-        fallbackError instanceof Error ? fallbackError.message : "AI search failed";
-      await persistTurn(null, message);
-      return NextResponse.json({ error: message }, { status: 502 });
+      response = await call(true);
+    } catch (error) {
+      if (!isRateLimited(error)) {
+        const message = error instanceof Error ? error.message : "AI search failed";
+        await persistTurn(null, message);
+        return NextResponse.json({ error: message }, { status: 502 });
+      }
+      try {
+        response = await call(false);
+      } catch (fallbackError) {
+        const fallbackMessage =
+          fallbackError instanceof Error ? fallbackError.message : "AI search failed";
+        const message = isRateLimited(fallbackError)
+          ? RATE_LIMIT_MESSAGE
+          : fallbackMessage;
+        await persistTurn(null, message);
+        return NextResponse.json({ error: message }, { status: 502 });
+      }
     }
   }
 

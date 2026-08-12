@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${MESSAGE_SERVICE}/messages/rooms`, {
+    const res = await fetch(`${MESSAGE_SERVICE}/rooms`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {

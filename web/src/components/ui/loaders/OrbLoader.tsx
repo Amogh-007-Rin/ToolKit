@@ -1,6 +1,7 @@
 // Particle Sphere — Originkit
 // Originkit — defaults rewritten to match preview.
 import React, { useEffect, useRef } from "react"
+import { useTheme } from "next-themes"
 const RenderTarget = {
     current: () => "preview",
     canvas: "canvas",
@@ -24,6 +25,7 @@ import {
     Group,
     Vector3,
     AdditiveBlending,
+    NormalBlending,
 } from "three"
 
 interface ParticleSphereRefactorProps {
@@ -198,6 +200,9 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
         animated = true,
         style,
     } = { ...COMPONENT_DEFAULTS, ...__props }
+    const { resolvedTheme } = useTheme()
+    const isDark = resolvedTheme !== "light"
+    const orbColor = __props.sphereColor ?? (isDark ? "#ffffff" : "#000000")
     // Flat controls rebuilt into the config objects the engine expects.
     const particlesConfig = { shape: "sphere", scale: particleScale }
     const cursorConfig = {
@@ -353,8 +358,8 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
         particleScatterVelocitiesRef.current = []
 
         // Resolve color tokens (CSS variables) and parse color properly
-        const resolvedSphereColor = resolveTokenColor(sphereColor)
-        const sphereRgba = parseColorToRgba(resolvedSphereColor || sphereColor)
+        const resolvedSphereColor = resolveTokenColor(orbColor)
+        const sphereRgba = parseColorToRgba(resolvedSphereColor || orbColor)
         // Use Color constructor with string for proper color space handling
         // Then apply the parsed RGB values to ensure opacity is extracted correctly
         const baseColorObj = resolvedSphereColor
@@ -398,7 +403,7 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
             // Use MeshBasicMaterial with AdditiveBlending for the glow effect
             const sphereMaterial = new MeshBasicMaterial({
                 color: 0xffffff,
-                blending: AdditiveBlending,
+                blending: isDark ? AdditiveBlending : NormalBlending,
                 transparent: particleOpacity < 1,
                 opacity: particleOpacity,
             })
@@ -460,7 +465,7 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
             const particlesMaterial = new PointsMaterial({
                 size: particleSize,
                 color: 0xffffff, // White multiplier when using vertexColors
-                blending: AdditiveBlending,
+                blending: isDark ? AdditiveBlending : NormalBlending,
                 depthTest: false,
                 transparent: particleOpacity < 1,
                 opacity: particleOpacity,
@@ -1442,7 +1447,8 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
         clickForce,
         cursorRadius,
         cursorStrength,
-        sphereColor,
+        orbColor,
+        isDark,
         rotationSpeed,
         scaleMultiplier,
         particleSize,

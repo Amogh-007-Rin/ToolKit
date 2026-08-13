@@ -53,6 +53,35 @@ function hostOf(link: string) {
   }
 }
 
+function faviconUrl(link: string): string | null {
+  try {
+    const host = new URL(link).hostname;
+    return `https://www.google.com/s2/favicons?domain=${host}&sz=64`;
+  } catch {
+    return null;
+  }
+}
+
+function ToolLogo({ link, name }: { link: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const Icon = TOOL_ICONS.sparkles;
+  return (
+    <div className="w-10 h-10 rounded-full bg-shade-background flex items-center justify-center shrink-0 overflow-hidden">
+      {!failed ? (
+        <img
+          src={faviconUrl(link) ?? ""}
+          alt={`${name} logo`}
+          className="w-full h-full object-cover"
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <Icon size={18} className="text-foreground" />
+      )}
+    </div>
+  );
+}
+
 export default function AISearchPage() {
   const router = useRouter();
   const { data: session } = useSession();
@@ -292,7 +321,7 @@ export default function AISearchPage() {
           data-lenis-wrapper
           className="flex-1 overflow-y-auto scrollbar-none"
         >
-        <div ref={contentRef} className="w-full max-w-190 mx-auto px-6 pb-4">
+        <div ref={contentRef} className="w-full max-w-280 mx-auto px-6 pb-4">
           {messages.length === 0 ? (
             <div className="h-full min-h-[50vh] flex flex-col items-center justify-center gap-8">
               <div className="flex flex-col items-center gap-4 text-center">
@@ -477,10 +506,9 @@ function MessageBubble({
               Here are {message.results.length} tool
               {message.results.length === 1 ? "" : "s"} that fit your requirements
             </p>
-            <div className="space-y-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
               {message.results.map((result) => {
                 const key = `${result.name}-${result.link}`;
-                const Icon = TOOL_ICONS.sparkles;
                 const saved = savedIn(result.name);
                 return (
                   <motion.div
@@ -488,56 +516,53 @@ function MessageBubble({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="bg-card rounded-2xl p-4 border border-border hover:border-primary/40 transition-colors"
+                    className="bg-card rounded-2xl p-4 border border-border hover:border-primary/40 transition-colors flex flex-col gap-2.5"
                   >
-                    <div className="flex items-start gap-3.5">
-                      <div className="w-11 h-11 rounded-xl bg-shade-background flex items-center justify-center shrink-0 overflow-hidden">
-                        <Icon size={20} className="text-foreground" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <ToolLogo link={result.link} name={result.name} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-foreground font-semibold truncate">
+                          {result.name}
+                        </p>
+                        <a
+                          href={result.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-xs text-primary hover:underline truncate"
+                        >
+                          <ExternalLink size={11} className="shrink-0" />
+                          <span className="truncate">{hostOf(result.link)}</span>
+                        </a>
                       </div>
-                      <div className="min-w-0 flex-1 pt-0.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <p className="text-foreground font-semibold truncate">
-                            {result.name}
-                          </p>
-                          <a
-                            href={result.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
-                          >
-                            <ExternalLink size={12} />
-                            {hostOf(result.link)}
-                          </a>
-                        </div>
-                        {result.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {result.description}
-                          </p>
-                        )}
-                        {result.reason && (
-                          <p className="text-[13px] text-muted-foreground/80 mt-1.5 flex items-start gap-1.5">
-                            <span>{result.reason}</span>
-                          </p>
-                        )}
-                      </div>
-                      <div className="relative shrink-0">
-                        {saved ? (
-                          <span className="h-8 px-3.5 rounded-xl bg-primary/10 text-primary text-xs font-medium flex items-center gap-1.5">
-                            <Check size={13} /> Saved
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => onToggleMenu(key)}
-                            className="h-8 px-3.5 bg-shade-background text-foreground rounded-xl text-xs font-medium hover:bg-muted/60 transition-colors cursor-pointer flex items-center gap-1.5"
-                          >
-                            {savingTo === result.name ? (
-                              <Loader2 size={13} className="animate-spin" />
-                            ) : (
-                              <BookmarkPlus size={13} />
-                            )}
-                            Save
-                          </button>
-                        )}
+                    </div>
+                    {result.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {result.description}
+                      </p>
+                    )}
+                    {result.reason && (
+                      <p className="text-[13px] text-muted-foreground/80 line-clamp-2">
+                        {result.reason}
+                      </p>
+                    )}
+                    <div className="relative mt-auto pt-1">
+                      {saved ? (
+                        <span className="w-full h-8 px-3.5 rounded-xl bg-primary/10 text-primary text-xs font-medium flex items-center justify-center gap-1.5">
+                          <Check size={13} /> Saved
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => onToggleMenu(key)}
+                          className="w-full h-8 px-3.5 bg-shade-background text-foreground rounded-xl text-xs font-medium hover:bg-muted/60 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          {savingTo === result.name ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <BookmarkPlus size={13} />
+                          )}
+                          Add to collection
+                        </button>
+                      )}
                         {openMenu === key && !saved && (
                           <div className="absolute right-0 top-10 z-20 w-60 bg-card border border-border rounded-xl shadow-lg p-1.5 flex flex-col max-h-64 overflow-y-auto">
                             <p className="text-xs text-muted-foreground px-2 py-1.5">
@@ -572,7 +597,6 @@ function MessageBubble({
                           </div>
                         )}
                       </div>
-                    </div>
                   </motion.div>
                 );
               })}

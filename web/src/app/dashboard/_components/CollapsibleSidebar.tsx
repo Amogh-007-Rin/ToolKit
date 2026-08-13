@@ -125,7 +125,7 @@ export default function CollapsibleSidebar({
                         key={chat.id}
                         onClick={() => onSelectChat(chat.id)}
                         className={`group w-full rounded-xl px-3 py-2.5 mb-1 cursor-pointer transition-colors ${
-                          activeChatId === chat.id ? "bg-primary/10" : "hover:bg-muted/60"
+                          activeChatId === chat.id ? "bg-ai-chat-history" : "hover:bg-muted/60"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ export default function CollapsibleSidebar({
                           <p
                             className={`flex-1 min-w-0 truncate text-[13px] font-medium ${
                               activeChatId === chat.id
-                                ? "text-primary"
+                                ? "text-theme-button-insider"
                                 : "text-sidebar-foreground"
                             }`}
                           >
@@ -156,7 +156,7 @@ export default function CollapsibleSidebar({
                             />
                           </button>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 pl-6">
+                        <div className="flex items-center gap-2 mt-1 pl-6 leading-2">
                           {chat.lastMessage && (
                             <p className="flex-1 min-w-0 truncate text-xs text-muted-foreground">
                               {chat.lastMessage}

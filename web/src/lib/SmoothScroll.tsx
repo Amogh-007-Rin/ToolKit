@@ -19,7 +19,9 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     rafId = requestAnimationFrame(raf);
 
     function markNested() {
-      document.querySelectorAll("[class*='overflow-']").forEach((el) => {
+      document
+        .querySelectorAll("[class*='overflow-']:not([data-lenis-wrapper])")
+        .forEach((el) => {
         if (!el.hasAttribute("data-lenis-prevent")) {
           el.setAttribute("data-lenis-prevent", "");
         }

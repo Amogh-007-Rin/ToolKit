@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
+import Lenis from "lenis";
 import {
   ArrowUp,
   Loader2,
@@ -65,6 +66,11 @@ export default function AISearchPage() {
   const [savingTo, setSavingTo] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const barFillRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
+  const [scrollable, setScrollable] = useState(false);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onQueryChange = (value: string) => {
@@ -99,6 +105,45 @@ export default function AISearchPage() {
     },
     []
   );
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    const content = contentRef.current;
+    if (!el || !content) return;
+    const lenis = new Lenis({
+      wrapper: el,
+      content,
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      syncTouch: true,
+      autoRaf: true,
+    });
+    const updateBar = (scroll: number, limit: number) => {
+      const rail = railRef.current;
+      const fill = barFillRef.current;
+      if (!rail || !fill) return;
+      setScrollable(limit > 0);
+      const progress = limit > 0 ? Math.min(1, Math.max(0, scroll / limit)) : 0;
+      const travel = rail.clientHeight * 0.93;
+      fill.style.transform = `translateY(${progress * travel}px)`;
+    };
+    const onScroll = ({ scroll, limit }: { scroll: number; limit: number }) =>
+      updateBar(scroll, limit);
+    lenis.on("scroll", onScroll);
+    updateBar(0, lenis.limit);
+    const ro = new ResizeObserver(() => {
+      lenis.resize();
+      updateBar(lenis.scroll, lenis.limit);
+    });
+    if (contentRef.current) ro.observe(contentRef.current);
+    if (scrollRef.current) ro.observe(scrollRef.current);
+    return () => {
+      lenis.off("scroll", onScroll);
+      ro.disconnect();
+      lenis.destroy();
+    };
+  }, []);
 
   const savedIn = (name: string) =>
     collections.find((c) =>
@@ -234,7 +279,7 @@ export default function AISearchPage() {
 
   return (
     <div className="w-full h-full flex overflow-hidden">
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden relative">
         <div className="shrink-0 flex items-center justify-between px-8 pt-5 pb-2">
           <div className="flex items-center gap-3">
             <AnimatedLogo size={28} />
@@ -242,8 +287,12 @@ export default function AISearchPage() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-        <div className="w-full max-w-190 mx-auto px-6 pb-4">
+        <div
+          ref={scrollRef}
+          data-lenis-wrapper
+          className="flex-1 overflow-y-auto scrollbar-none"
+        >
+        <div ref={contentRef} className="w-full max-w-190 mx-auto px-6 pb-4">
           {messages.length === 0 ? (
             <div className="h-full min-h-[50vh] flex flex-col items-center justify-center gap-8">
               <div className="flex flex-col items-center gap-4 text-center">
@@ -296,6 +345,18 @@ export default function AISearchPage() {
           )}
           <div ref={bottomRef} />
         </div>
+      </div>
+
+      <div
+        ref={railRef}
+        className={`absolute right-1 top-16 bottom-24 w-1 rounded-full bg-transparent overflow-hidden pointer-events-none transition-opacity duration-300 ${
+          scrollable ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <div
+          ref={barFillRef}
+          className="w-full h-[7%] rounded-full bg-foreground"
+        />
       </div>
 
       <div className="shrink-0 w-full flex justify-center px-6 pb-6 pt-2">

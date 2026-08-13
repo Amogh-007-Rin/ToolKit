@@ -21,6 +21,15 @@ interface AIResult {
   reason: string;
 }
 
+interface HistoryTurn {
+  role: "user" | "assistant";
+  content: string | null;
+  results: AIResult[] | null;
+  error: string | null;
+}
+
+const HISTORY_MAX_TURNS = 20;
+
 const cache = new Map<string, { at: number; results: AIResult[] }>();
 
 function sanitizeLink(raw: string): string | null {
@@ -49,10 +58,46 @@ function isRateLimited(error: unknown): boolean {
   return anyError.statusCode === 429;
 }
 
-function promptFor(query: string) {
+async function loadHistory(chatId: string): Promise<HistoryTurn[]> {
+  const rows = await prisma.aIChatMessage.findMany({
+    where: { chatId },
+    orderBy: { createdAt: "desc" },
+    take: HISTORY_MAX_TURNS * 2,
+    select: { role: true, content: true, results: true, error: true },
+  });
+  return rows.reverse().map((row) => ({
+    role: row.role === "assistant" ? "assistant" : "user",
+    content: row.content,
+    results: row.results ? (row.results as unknown as AIResult[]) : null,
+    error: row.error,
+  }));
+}
+
+function transcriptOf(history: HistoryTurn[]): string {
+  const lines: string[] = [];
+  for (const turn of history) {
+    if (turn.role === "user") {
+      lines.push(`User: ${turn.content ?? ""}`);
+    } else if (turn.results && turn.results.length > 0) {
+      lines.push(
+        `Assistant recommended: ${turn.results
+          .map((r) => `${r.name} (${r.link})`)
+          .join(", ")}`,
+      );
+    } else if (turn.error) {
+      lines.push(`Assistant (error): ${turn.error}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+function promptFor(query: string, history: HistoryTurn[]) {
+  const context = history.length
+    ? `Earlier in this conversation:\n${transcriptOf(history)}\n\nThe developer just asked a follow-up: "${query}". It may reference the conversation above (e.g. pick the best fit among tools recommended earlier, or focus on the specific aspect they now ask about).\n`
+    : "";
   return `You are an expert tool finder. A developer needs a tool for this use case:
 "${query}"
-
+${context}
 Find real, well-known tools available on the internet (NOT tools from any local collection). Recommend at most 8 tools that fit the use case.
 
 For each tool return:
@@ -111,6 +156,7 @@ export async function POST(req: Request) {
   }
 
   const chatId = body.chatId?.trim() || null;
+  let history: HistoryTurn[] = [];
   if (chatId) {
     const chat = await prisma.aIChat.findFirst({
       where: { id: chatId, userId },
@@ -119,6 +165,7 @@ export async function POST(req: Request) {
     if (!chat) {
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
     }
+    history = await loadHistory(chatId);
   }
 
   const persistTurn = async (results: AIResult[] | null, error: string | null) => {
@@ -144,13 +191,13 @@ export async function POST(req: Request) {
   };
 
   const cached = cache.get(query);
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+  if (!chatId && cached && Date.now() - cached.at < CACHE_TTL_MS) {
     await persistTurn(cached.results, null);
     return NextResponse.json({ results: cached.results });
   }
 
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  const prompt = promptFor(query);
+  const prompt = promptFor(query, history);
 
   const call = async (grounded: boolean) =>
     ai.models.generateContent({
@@ -206,11 +253,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status: 502 });
   }
 
-  if (cache.size >= CACHE_MAX) {
-    const oldest = cache.keys().next().value;
-    if (oldest) cache.delete(oldest);
+  if (!chatId) {
+    if (cache.size >= CACHE_MAX) {
+      const oldest = cache.keys().next().value;
+      if (oldest) cache.delete(oldest);
+    }
+    cache.set(query, { at: Date.now(), results });
   }
-  cache.set(query, { at: Date.now(), results });
 
   await persistTurn(results, null);
 

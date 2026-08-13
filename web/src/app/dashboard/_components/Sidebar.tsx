@@ -130,7 +130,11 @@ export default function Sidebar() {
       <div className="part-3 w-[90%] h-[25%] flex flex-col justify-evenly items-center">
         <Notificationbutton count={unreadCount} onClick={() => setShowNotifications(true)} />
         <SignoutButton onClick={handleSignOut} />
-        <Profilebutton onClick={() => router.push("/profile")} />
+        <Profilebutton
+          onClick={() => router.push("/profile")}
+          imageUrl={session?.user?.image}
+          name={session?.user?.name}
+        />
       </div>
       <NotificationPanel
         isOpen={showNotifications}

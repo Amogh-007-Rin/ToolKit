@@ -5,6 +5,7 @@ import LinkedInProvider from "next-auth/providers/linkedin";
 import DiscordProvider  from "next-auth/providers/discord"; 
 import { PrismaAdapter } from "@/lib/prismaAdapter";
 import prisma from "@/db";
+import { resolveStoredUrl } from "@/lib/storage";
 import { verifyPassword } from "@/lib/password";
 import { credentialsSchema } from "@/types/validation";
 import type { AuthOptions } from "next-auth";
@@ -66,8 +67,17 @@ export const NEXT_AUTH_CONFIG: AuthOptions = {
             return token;
         },
         async session({ session, token }) {
-            if (session.user) {
+            if (session.user && token.id) {
                 session.user.id = token.id as string;
+                try {
+                    const user = await prisma.user.findUnique({
+                        where: { id: token.id as string },
+                        select: { image: true },
+                    });
+                    session.user.image = user ? await resolveStoredUrl(user.image) : null;
+                } catch {
+                    // keep default session image on failure
+                }
             }
             return session;
         },

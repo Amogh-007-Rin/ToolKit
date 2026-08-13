@@ -11,24 +11,35 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       smoothWheel: true,
     });
 
-    let rafId: number;
-    function raf(time: number) {
-      lenis.raf(time);
-      rafId = requestAnimationFrame(raf);
+    function isScrollable(el: HTMLElement): boolean {
+      return (
+        el.scrollHeight > el.clientHeight + 1 ||
+        el.scrollWidth > el.clientWidth + 1
+      );
     }
-    rafId = requestAnimationFrame(raf);
 
     function markNested() {
       document
-        .querySelectorAll("[class*='overflow-']:not([data-lenis-wrapper])")
+        .querySelectorAll<HTMLElement>("[class*='overflow-']:not([data-lenis-wrapper])")
         .forEach((el) => {
-        if (!el.hasAttribute("data-lenis-prevent")) {
-          el.setAttribute("data-lenis-prevent", "");
-        }
-      });
+          if (isScrollable(el)) {
+            if (!el.hasAttribute("data-lenis-prevent")) {
+              el.setAttribute("data-lenis-prevent", "");
+            }
+          } else if (el.hasAttribute("data-lenis-prevent")) {
+            el.removeAttribute("data-lenis-prevent");
+          }
+        });
     }
 
-    markNested();
+    let rafId: number;
+    let frame = 0;
+    function raf(time: number) {
+      lenis.raf(time);
+      if (frame++ % 5 === 0) markNested();
+      rafId = requestAnimationFrame(raf);
+    }
+    rafId = requestAnimationFrame(raf);
 
     const observer = new MutationObserver(() => markNested());
     observer.observe(document.body, { subtree: true, childList: true, attributes: false });

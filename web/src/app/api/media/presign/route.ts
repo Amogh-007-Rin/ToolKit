@@ -8,7 +8,7 @@ type Scope = "chat" | "post" | "profile" | "banner";
 async function isRoomMember(userId: string, roomId: string): Promise<boolean> {
   const rows = await prisma.$queryRaw<{ exists: boolean }[]>`
     SELECT EXISTS (
-      SELECT 1 FROM room_members WHERE room_id = ${roomId} AND user_id = ${userId}
+      SELECT 1 FROM messaging.room_members WHERE room_id = ${roomId} AND user_id = ${userId}
     ) AS exists`;
   return rows[0]?.exists ?? false;
 }

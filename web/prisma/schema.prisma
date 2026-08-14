@@ -57,6 +57,8 @@ model Tool {
   link         String?
   icon         String     @default("sparkles")
   logoUrl      String?
+  description  String?
+  reason       String?
   collectionId String
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   createdAt    DateTime   @default(now())

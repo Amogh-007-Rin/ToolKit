@@ -22,6 +22,8 @@ export const toolCreateSchema = z.object({
   name: z.string().trim().min(1).max(120),
   link: z.string().trim().max(500).optional(),
   icon: z.string().trim().max(64).default("sparkles"),
+  description: z.string().trim().max(500).nullable().optional(),
+  reason: z.string().trim().max(300).nullable().optional(),
   logoUrl: z
     .string()
     .trim()
@@ -46,7 +48,10 @@ export const commentCreateSchema = z.object({
 
 export const profileUpdateSchema = z.object({
   name: z.string().trim().min(1).max(100),
-  bio: z.string().trim().max(200).default(""),
+  bio: z.string().trim().max(400).refine(
+    (value) => (value.match(/\S+/g) ?? []).length <= 40,
+    "Bio must be 40 words or fewer",
+  ).default(""),
   role: z.string().trim().max(200).default(""),
   location: z.string().trim().max(200).default(""),
   skills: z.array(z.string().trim().min(1).max(50)).max(20).default([]),

@@ -4,6 +4,10 @@ export interface Tool {
     link: string | null;
     icon: string;
     logoUrl: string | null;
+    description: string | null;
+    reason: string | null;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface Collection {
@@ -11,4 +15,6 @@ export interface Collection {
     title: string;
     description: string;
     tools: Tool[];
+    createdAt?: string;
+    updatedAt?: string;
 }

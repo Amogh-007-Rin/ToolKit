@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 const MESSAGE_SERVICE =
-  process.env.NEXT_PUBLIC_MESSAGE_SERVICE_URL ?? "http://127.0.0.1:8080";
+  process.env.MESSAGE_SERVICE_INTERNAL_URL ?? "http://127.0.0.1:8080";
 
 export async function GET(req: NextRequest) {
   const token = await getToken({

@@ -1,5 +1,20 @@
 export const MESSAGE_SERVICE_URL =
-  process.env.NEXT_PUBLIC_MESSAGE_SERVICE_URL ?? "http://127.0.0.1:8080";
+  process.env.NEXT_PUBLIC_MESSAGE_SERVICE_URL ?? "/message-service";
+
+function messageSocketUrl(): string {
+  if (/^https?:\/\//.test(MESSAGE_SERVICE_URL)) {
+    return `${MESSAGE_SERVICE_URL.replace(/^http/, "ws")}/ws`;
+  }
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  // Next rewrites reliably proxy the REST calls, but a browser WebSocket
+  // upgrade is not forwarded by every Next dev-server path. On LAN HTTP
+  // development, connect to the message service on the same host directly.
+  if (window.location.protocol === "http:" && window.location.port === "3000") {
+    return `${protocol}//${window.location.hostname}:8080/ws`;
+  }
+  const base = MESSAGE_SERVICE_URL.startsWith("/") ? MESSAGE_SERVICE_URL : `/${MESSAGE_SERVICE_URL}`;
+  return `${protocol}//${window.location.host}${base}/ws`;
+}
 
 export interface Contact {
   id: string;
@@ -48,6 +63,7 @@ export interface RoomListItem extends Room {
 }
 
 export type ClientEvent =
+  | { type: "heartbeat" }
   | { type: "joinRoom"; roomId: string }
   | { type: "leaveRoom"; roomId: string }
   | {
@@ -161,6 +177,7 @@ export class MessagingSocket {
   private status: ConnStatus = "offline";
   private reconnectDelayMs = 1000;
   private reconnectTimer: number | null = null;
+  private heartbeatTimer: number | null = null;
   private epoch = 0;
   private statusListeners = new Set<(status: ConnStatus) => void>();
   private eventListeners = new Set<(event: ServerEvent) => void>();
@@ -193,7 +210,7 @@ export class MessagingSocket {
       if (epoch !== this.epoch) {
         return;
       }
-      const url = `${MESSAGE_SERVICE_URL.replace(/^http/, "ws")}/ws?token=${encodeURIComponent(token)}`;
+      const url = `${messageSocketUrl()}?token=${encodeURIComponent(token)}`;
       const ws = new WebSocket(url);
       this.ws = ws;
       ws.onopen = () => {
@@ -203,6 +220,7 @@ export class MessagingSocket {
         }
         this.setStatus("open");
         this.reconnectDelayMs = 1000;
+        this.startHeartbeat();
         this.flushQueue();
       };
       ws.onmessage = (event) => {
@@ -220,6 +238,7 @@ export class MessagingSocket {
         if (epoch !== this.epoch) {
           return;
         }
+        this.stopHeartbeat();
         this.ws = null;
         this.scheduleReconnect();
       };
@@ -243,6 +262,22 @@ export class MessagingSocket {
       this.reconnectTimer = null;
       this.connect();
     }, delay);
+  }
+
+  private startHeartbeat() {
+    this.stopHeartbeat();
+    this.heartbeatTimer = window.setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: "heartbeat" } satisfies ClientEvent));
+      }
+    }, 15_000);
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatTimer !== null) {
+      window.clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
   }
 
   send(event: ClientEvent) {
@@ -275,6 +310,7 @@ export class MessagingSocket {
     this.ws?.close();
     this.ws = null;
     this.queue = [];
+    this.stopHeartbeat();
     if (this.reconnectTimer !== null) {
       window.clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;

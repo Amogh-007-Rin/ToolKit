@@ -10,6 +10,7 @@ pub const MAX_ATTACHMENT_NAME_LEN: usize = 255;
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum ClientEvent {
+    Heartbeat,
     #[serde(rename_all = "camelCase")]
     JoinRoom { room_id: String },
     #[serde(rename_all = "camelCase")]

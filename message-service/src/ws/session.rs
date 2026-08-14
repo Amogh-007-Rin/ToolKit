@@ -134,6 +134,9 @@ async fn handle_client_event(state: &AppState, conn_id: ConnId, text: &str) {
     drop(session);
 
     match event {
+        ClientEvent::Heartbeat => {
+            state.touch_user(&user_id);
+        }
         ClientEvent::JoinRoom { room_id } => {
             if !valid_id(&room_id) {
                 send_error(

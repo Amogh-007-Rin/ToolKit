@@ -36,6 +36,8 @@
     ".next",
     "out",
     "build",
-    "dist"
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ]
 }

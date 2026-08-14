@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import {
   S3Client,
   DeleteObjectCommand,
@@ -111,10 +112,43 @@ export async function resolveStoredUrl(value: string | null): Promise<string | n
     return value;
   }
   try {
-    return await createPresignedGet(value as string);
+    return createLocalMediaUrl(value as string);
   } catch {
     return value;
   }
+}
+
+function mediaSigningSecret(): string {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) throw new Error("NEXTAUTH_SECRET is not configured");
+  return secret;
+}
+
+export function createLocalMediaUrl(key: string, expiresIn = PRESIGN_GET_TTL_SECONDS): string {
+  assertValidKey(key);
+  const expires = Math.floor(Date.now() / 1000) + expiresIn;
+  const signature = createHmac("sha256", mediaSigningSecret()).update(`${key}:${expires}`).digest("hex");
+  const params = new URLSearchParams({ key, expires: String(expires), signature });
+  return `/api/media/file?${params.toString()}`;
+}
+
+export function verifyLocalMediaUrl(key: string, expires: string, signature: string): boolean {
+  assertValidKey(key);
+  const expiresAt = Number(expires);
+  if (!Number.isSafeInteger(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) return false;
+  const expected = createHmac("sha256", mediaSigningSecret()).update(`${key}:${expiresAt}`).digest("hex");
+  if (signature.length !== expected.length) return false;
+  return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+}
+
+export async function putObject(key: string, body: Buffer, contentType: string): Promise<void> {
+  assertValidKey(key);
+  await getClient().send(new PutObjectCommand({ Bucket: getBucket(), Key: key, Body: body, ContentType: contentType, ContentLength: body.length }));
+}
+
+export async function getObject(key: string) {
+  assertValidKey(key);
+  return getClient().send(new GetObjectCommand({ Bucket: getBucket(), Key: key }));
 }
 
 export async function createPresignedPut(

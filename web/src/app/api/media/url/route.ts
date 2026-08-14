@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
-import { assertValidKey, createPresignedGet } from "@/lib/storage";
+import { assertValidKey, createLocalMediaUrl } from "@/lib/storage";
 
 async function isRoomMember(userId: string, roomId: string): Promise<boolean> {
   const rows = await prisma.$queryRaw<{ exists: boolean }[]>`
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const url = await createPresignedGet(key);
+    const url = createLocalMediaUrl(key);
     return NextResponse.json({ key, url });
   } catch (error) {
     return NextResponse.json(

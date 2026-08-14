@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
-import { createPresignedPut, newObjectKey, validateMedia } from "@/lib/storage";
+import { newObjectKey, validateMedia } from "@/lib/storage";
 
 type Scope = "chat" | "post" | "profile" | "banner";
 
@@ -67,7 +67,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const key = newObjectKey(prefix, contentType);
-    const { uploadUrl, expiresAt } = await createPresignedPut(key, contentType, size);
+    const uploadUrl = `/api/media/upload?${new URLSearchParams({ key }).toString()}`;
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     return NextResponse.json({ key, kind, uploadUrl, expiresAt });
   } catch (error) {
     return NextResponse.json(

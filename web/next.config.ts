@@ -47,6 +47,14 @@ function s3UsesPrivateNetwork(): boolean {
 }
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: "/message-service/:path*",
+        destination: "http://127.0.0.1:8080/:path*",
+      },
+    ];
+  },
   images: {
     dangerouslyAllowLocalIP: s3UsesPrivateNetwork(),
     remotePatterns: [

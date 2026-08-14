@@ -30,12 +30,12 @@ function ErrorContent() {
   const config = ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.Default;
 
   return (
-    <div className="w-screen h-screen bg-background flex items-center justify-center">
+    <div className="flex min-h-dvh w-full items-center justify-center bg-background p-3 sm:p-4">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="w-[90%] max-w-md bg-card border border-border rounded-3xl p-10 flex flex-col items-center gap-6 text-center"
+        className="flex w-full max-w-md flex-col items-center gap-6 rounded-3xl border border-border bg-card p-6 text-center sm:p-10"
       >
         <h1 className="text-3xl text-foreground font-bold tracking-tight">{config.title}</h1>
         <p className="text-muted-foreground text-sm leading-relaxed">{config.message}</p>
@@ -52,7 +52,7 @@ function ErrorContent() {
 
 export default function ErrorPage() {
   return (
-    <Suspense fallback={<div className="w-screen h-screen bg-background" />}>
+    <Suspense fallback={<div className="min-h-dvh w-full bg-background" />}>
       <ErrorContent />
     </Suspense>
   );

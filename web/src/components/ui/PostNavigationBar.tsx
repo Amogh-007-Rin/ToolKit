@@ -131,7 +131,7 @@ export default function PostNavigationBar() {
           >
             {activeTab === "posts" && (
               posts.length > 0 ? (
-                <div className="w-full grid grid-cols-5 gap-1 p-1">
+                <div className="grid w-full grid-cols-3 gap-1 p-1 sm:grid-cols-4 lg:grid-cols-5">
                   {posts.map((post, index) => {
                     const first = post.media[0];
                     return (
@@ -179,7 +179,7 @@ export default function PostNavigationBar() {
             )}
             {activeTab === "saved" && (
               savedPosts.length > 0 ? (
-                <div className="w-full grid grid-cols-5 gap-1 p-1">
+                <div className="grid w-full grid-cols-3 gap-1 p-1 sm:grid-cols-4 lg:grid-cols-5">
                   {savedPosts.map((post, index) => {
                     const first = post.media[0];
                     return (

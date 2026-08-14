@@ -19,7 +19,7 @@ function SignInContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
-    const [isSignUp, setIsSignUp] = useState(true);
+    const [isSignUp, setIsSignUp] = useState(false);
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");

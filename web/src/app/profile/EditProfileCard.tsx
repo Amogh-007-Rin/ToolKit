@@ -12,6 +12,13 @@ interface EditProfileCardProps {
   onSubmit: (data: EditableProfile) => void;
 }
 
+const BIO_WORD_LIMIT = 40;
+
+const limitWords = (value: string) => {
+  const words = value.match(/\S+/g) ?? [];
+  return words.length > BIO_WORD_LIMIT ? words.slice(0, BIO_WORD_LIMIT).join(" ") : value;
+};
+
 export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit }: EditProfileCardProps) {
   const [name, setName] = useState(initialData.name);
   const [bio, setBio] = useState(initialData.bio);
@@ -64,13 +71,13 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
             transition={{ duration: 0.25 }}
             onClick={onClose}
           />
-          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 pointer-events-none sm:p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.8, y: 24 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.6, y: 12 }}
               transition={{ type: "spring", stiffness: 260, damping: 24 }}
-              className="pointer-events-auto w-[70%] h-[70%] rounded-3xl bg-card border border-border shadow-2xl flex flex-col overflow-hidden"
+              className="pointer-events-auto flex max-h-[92dvh] h-full w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl sm:h-[82dvh]"
             >
               <div className="w-full h-16 flex items-center justify-between px-6 border-b border-border shrink-0">
                 <p className="text-xl text-foreground font-semibold">Edit Profile</p>
@@ -83,7 +90,7 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
                   <X size={20} />
                   </motion.button>
               </div>
-              <div className="w-full flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+              <div data-lenis-prevent className="flex w-full flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-6">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm text-muted-foreground font-medium">Toolkit Tag</label>
                   <div className="flex items-center h-12 bg-input border border-border rounded-xl px-4 focus-within:border-primary transition-colors">
@@ -115,10 +122,13 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
                   <textarea
                     placeholder="A short bio about yourself"
                     value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    rows={3}
+                    onChange={(e) => setBio(limitWords(e.target.value))}
+                    rows={4}
                     className="w-full bg-input border border-border rounded-xl px-4 py-3 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors resize-none"
                   />
+                  <p className="text-xs text-muted-foreground text-right">
+                    {(bio.match(/\S+/g) ?? []).length}/{BIO_WORD_LIMIT} words
+                  </p>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-sm text-muted-foreground font-medium">Current Role</label>

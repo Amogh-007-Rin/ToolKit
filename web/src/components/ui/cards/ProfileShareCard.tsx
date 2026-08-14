@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, QrCode, X } from "lucide-react";
 import Image from "next/image";
 import QRCode from "qrcode";
+import Spinner from "@/components/ui/loaders/Spinner";
 
 interface ProfileShareCardProps {
   isOpen: boolean;
@@ -109,7 +110,7 @@ export default function ProfileShareCard({ isOpen, tag, onClose }: ProfileShareC
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <QrCode size={32} className="animate-pulse" />
+                      <Spinner size="md" label="Generating QR code" />
                       <p className="text-xs">Generating...</p>
                     </div>
                   )}

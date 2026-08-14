@@ -10,10 +10,10 @@ import {
   UserPlus,
   Check,
   MessageCircle,
-  Loader2,
   UserRound,
   Play,
 } from "lucide-react";
+import ProfileSkeleton from "@/components/ui/loaders/ProfileSkeleton";
 import Multibutton from "@/app/dashboard/_components/buttons/Multibutton";
 import SkillTag from "@/components/ui/tags/SkillTag";
 import PostDetailCard from "@/components/ui/PostDetailCard";
@@ -114,11 +114,7 @@ export default function VisiterProfile() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen w-full bg-background flex items-center justify-center">
-        <Loader2 size={28} className="animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (notFound || !user) {
@@ -148,7 +144,7 @@ export default function VisiterProfile() {
     <div className="min-h-screen w-full bg-background relative">
       <button
         onClick={() => router.back()}
-        className="fixed top-6 left-6 w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors cursor-pointer z-10 shadow-2xs"
+        className="fixed left-3 top-3 z-30 flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-border bg-card shadow-2xs transition-colors hover:bg-muted sm:left-6 sm:top-6"
       >
         <ArrowLeft size={20} className="text-foreground" />
       </button>
@@ -167,8 +163,8 @@ export default function VisiterProfile() {
           ) : null}
         </div>
 
-        <div className="profile-info w-full h-[35vh] relative">
-          <div className="w-40 h-40 flex flex-col rounded-full items-center justify-center absolute -top-20 left-25 z-10">
+        <div className="profile-info relative w-full px-4 pb-5 pt-18 sm:px-8 sm:pt-24 lg:h-[35vh] lg:px-0 lg:pb-0 lg:pt-0">
+          <div className="absolute -top-14 left-4 z-10 flex h-28 w-28 flex-col items-center justify-center rounded-full sm:-top-20 sm:left-24 sm:h-40 sm:w-40">
             <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-background bg-shade-background">
               {user.image ? (
                 <Image
@@ -188,7 +184,7 @@ export default function VisiterProfile() {
             </div>
           </div>
 
-          <div className="part-1 w-full h-[30%] flex flex-col justify-center items-end gap-2 px-10">
+          <div className="part-1 flex w-full flex-col items-start gap-2 sm:items-end lg:h-[30%] lg:justify-center lg:px-10">
             <div className="flex items-center gap-2 px-1.5">
               <p className="text-foreground">Current Role</p>
               <BriefcaseBusiness size={18} className="text-foreground" />
@@ -198,57 +194,57 @@ export default function VisiterProfile() {
             </span>
           </div>
 
-          <div className="part-2 h-[27%] flex items-center">
-            <div className="profile-name w-full h-full relative flex items-center">
-              <p className="absolute left-27 top-4 text-2xl font-bold text-foreground">
+          <div className="part-2 mt-5 flex items-center lg:mt-0 lg:h-[27%]">
+            <div className="profile-name relative flex w-full flex-col lg:h-full lg:justify-center">
+              <p className="text-2xl font-bold text-foreground lg:absolute lg:left-27 lg:top-4">
                 {user.name || "Unnamed User"}
               </p>
-              <p className="absolute left-27 top-12 text-sm font-light text-foreground">
+              <p className="text-sm font-light text-foreground lg:absolute lg:left-27 lg:top-12">
                 {user.tag ? `@${user.tag}` : "@toolkit-tag"}
               </p>
             </div>
           </div>
 
-          <div className="part-3 h-[10%] flex items-center">
-            <div className="profile-occupation w-full h-full relative flex items-center">
-              <p className="absolute left-27 text-foreground">
+          <div className="part-3 mt-4 flex items-center lg:mt-0 lg:h-[10%]">
+            <div className="profile-occupation relative flex w-full flex-col gap-3 lg:h-full lg:flex-row lg:items-center">
+              <p className="line-clamp-4 max-w-xl wrap-break-word text-foreground lg:absolute lg:left-27">
                 {user.bio || "No bio yet"}
               </p>
-              <p className="absolute right-10 text-sm text-muted-foreground">
+              <p className="text-base text-muted-foreground lg:absolute lg:right-10">
                 {user.followers} followers · {user.following} following
               </p>
             </div>
           </div>
 
-          <div className="part-4 h-[10%] flex items-center">
-            <div className="profile-location w-[50%] h-full relative flex items-center">
-              <p className="absolute left-27 text-foreground">
+          <div className="part-4 mt-4 flex flex-col gap-3 lg:mt-0 lg:h-[10%] lg:flex-row lg:items-center">
+            <div className="profile-location relative flex items-center lg:h-full lg:w-[50%]">
+              <p className="text-foreground lg:absolute lg:left-27">
                 {user.location || "No location"}
               </p>
             </div>
-            <div className="flex items-center justify-end gap-2 px-10 w-[50%] h-full">
+            <div className="flex items-center gap-2 lg:h-full lg:w-[50%] lg:justify-end lg:px-10">
               <p className="text-foreground">Skills</p>
               <Star size={16} className="text-foreground" />
             </div>
           </div>
 
-          <div className="part-5 w-full h-[28%] flex items-center">
-            <div className="left-part w-[30%] h-full flex items-center relative">
+          <div className="part-5 mt-3 flex w-full flex-col gap-3 lg:mt-0 lg:h-[28%] lg:flex-row lg:items-center">
+            <div className="left-part relative flex items-center lg:h-full lg:w-[30%]">
               {user.isMe ? (
                 <button
                   onClick={() => router.push("/profile")}
-                  className="absolute left-27 h-[30%] rounded-4xl bg-card flex items-center justify-center px-5 cursor-pointer"
+                  className="flex h-11 cursor-pointer items-center justify-center rounded-4xl bg-card px-5 lg:absolute lg:left-27 lg:h-[30%]"
                 >
                   <p className="text-foreground">This is you</p>
                 </button>
               ) : (
-                <div className="absolute left-27 h-full flex items-center gap-2 w-75">
+                <div className="flex h-11 w-full items-center gap-2 sm:w-75 lg:absolute lg:left-27 lg:h-full">
                   <Multibutton
                     tag="follow-profile"
                     label={user.followedByMe ? "Following" : "Follow"}
                     icon={user.followedByMe ? Check : UserPlus}
                     onClick={toggleFollow}
-                    className={`h-[30%] rounded-4xl ${
+                    className={`h-11! rounded-4xl lg:h-[30%]! ${
                       user.followedByMe ? "bg-foreground text-card" : ""
                     } w-[50%]`}
                     iconClassName={user.followedByMe ? "text-card" : "text-foreground"}
@@ -259,14 +255,14 @@ export default function VisiterProfile() {
                     label="Message"
                     icon={MessageCircle}
                     onClick={() => router.push(`/dashboard/messages?user=${user.id}`)}
-                    className="h-[30%] rounded-4xl bg-foreground text-card w-[50%]"
+                    className="h-11! w-[50%] rounded-4xl bg-foreground text-card lg:h-[30%]!"
                     iconClassName="text-card"
                     textClassName="text-card"
                   />
                 </div>
               )}
             </div>
-            <div className="right-part w-[70%] h-full flex items-start justify-end px-10 py-2 gap-2">
+            <div className="right-part flex flex-wrap items-start gap-2 lg:h-full lg:w-[70%] lg:justify-end lg:px-10 lg:py-2">
               {user.skills.length > 0
                 ? user.skills.map((skill) => <SkillTag key={skill} skill={skill} />)
                 : <p className="text-muted-foreground text-sm">No skills added yet</p>}
@@ -276,7 +272,7 @@ export default function VisiterProfile() {
 
         <div className="part-3-post-navigator w-full py-4">
           {posts.length > 0 ? (
-            <div className="w-full grid grid-cols-5 gap-1 p-1">
+            <div className="grid w-full grid-cols-3 gap-1 p-1 sm:grid-cols-4 lg:grid-cols-5">
               {posts.map((post, index) => {
                 const first = post.media[0];
                 return (

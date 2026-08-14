@@ -65,6 +65,8 @@ function ToolForm({ initialTool, onClose, onSubmit }: Omit<AddToolCardProps, "is
             link: link.trim(),
             icon: selectedIcon,
             logoUrl: logoUrl ?? null,
+            description: initialTool?.description ?? null,
+            reason: initialTool?.reason ?? null,
         });
     };
 
@@ -108,7 +110,7 @@ function ToolForm({ initialTool, onClose, onSubmit }: Omit<AddToolCardProps, "is
                     <p className="text-sm text-muted-foreground">
                         Choose a logo {logoUrl ? "(fallback — logo will be taken from the link)" : ""}
                     </p>
-                    <div className="grid grid-cols-8 gap-2">
+                    <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8">
                         {TOOL_ICON_NAMES.map((iconName) => {
                             const Icon = TOOL_ICONS[iconName];
                             const isSelected = selectedIcon === iconName;

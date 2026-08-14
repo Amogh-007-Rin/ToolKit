@@ -20,33 +20,40 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
     function markNested() {
       document
-        .querySelectorAll<HTMLElement>("[class*='overflow-']:not([data-lenis-wrapper])")
+        .querySelectorAll<HTMLElement>(
+          "[class*='overflow-auto']:not([data-lenis-wrapper]), [class*='overflow-scroll']:not([data-lenis-wrapper])",
+        )
         .forEach((el) => {
           if (isScrollable(el)) {
-            if (!el.hasAttribute("data-lenis-prevent")) {
-              el.setAttribute("data-lenis-prevent", "");
-            }
-          } else if (el.hasAttribute("data-lenis-prevent")) {
+            el.setAttribute("data-lenis-auto-prevent", "");
+            el.setAttribute("data-lenis-prevent", "");
+          } else if (el.hasAttribute("data-lenis-auto-prevent")) {
+            el.removeAttribute("data-lenis-auto-prevent");
             el.removeAttribute("data-lenis-prevent");
           }
         });
     }
 
     let rafId: number;
-    let frame = 0;
     function raf(time: number) {
       lenis.raf(time);
-      if (frame++ % 5 === 0) markNested();
       rafId = requestAnimationFrame(raf);
     }
     rafId = requestAnimationFrame(raf);
 
     const observer = new MutationObserver(() => markNested());
     observer.observe(document.body, { subtree: true, childList: true, attributes: false });
+    window.addEventListener("resize", markNested, { passive: true });
+    markNested();
 
     return () => {
       cancelAnimationFrame(rafId);
       observer.disconnect();
+      window.removeEventListener("resize", markNested);
+      document.querySelectorAll<HTMLElement>("[data-lenis-auto-prevent]").forEach((el) => {
+        el.removeAttribute("data-lenis-auto-prevent");
+        el.removeAttribute("data-lenis-prevent");
+      });
       lenis.destroy();
     };
   }, []);

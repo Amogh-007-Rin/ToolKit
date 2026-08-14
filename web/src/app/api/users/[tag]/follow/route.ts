@@ -23,36 +23,44 @@ export async function POST(_req: Request, { params }: { params: Promise<{ tag: s
     return NextResponse.json({ error: "You cannot follow yourself" }, { status: 400 });
   }
 
-  const existing = await prisma.follow.findUnique({
-    where: {
-      followerId_followingId: { followerId: userId, followingId: target.id },
-    },
-  });
+  const followed = await prisma.$transaction(async (tx) => {
+    const existing = await tx.follow.findUnique({
+      where: {
+        followerId_followingId: { followerId: userId, followingId: target.id },
+      },
+    });
 
-  if (existing) {
-    await prisma.follow.delete({ where: { id: existing.id } });
-    await prisma.user.update({
-      where: { id: target.id },
-      data: { followers: { decrement: 1 } },
-    });
-    await prisma.user.update({
-      where: { id: userId },
-      data: { following: { decrement: 1 } },
-    });
-  } else {
-    await prisma.follow.create({ data: { followerId: userId, followingId: target.id } });
-    await prisma.user.update({
-      where: { id: target.id },
-      data: { followers: { increment: 1 } },
-    });
-    await prisma.user.update({
-      where: { id: userId },
-      data: { following: { increment: 1 } },
-    });
-    await prisma.notification.create({
-      data: { userId: target.id, actorId: userId, type: "follow" },
-    });
-  }
+    if (existing) {
+      await tx.follow.delete({ where: { id: existing.id } });
+      await Promise.all([
+        tx.user.update({
+          where: { id: target.id },
+          data: { followers: { decrement: 1 } },
+        }),
+        tx.user.update({
+          where: { id: userId },
+          data: { following: { decrement: 1 } },
+        }),
+      ]);
+      return false;
+    }
+
+    await tx.follow.create({ data: { followerId: userId, followingId: target.id } });
+    await Promise.all([
+      tx.user.update({
+        where: { id: target.id },
+        data: { followers: { increment: 1 } },
+      }),
+      tx.user.update({
+        where: { id: userId },
+        data: { following: { increment: 1 } },
+      }),
+      tx.notification.create({
+        data: { userId: target.id, actorId: userId, type: "follow" },
+      }),
+    ]);
+    return true;
+  });
 
   const followers = await prisma.user.findUnique({
     where: { id: target.id },
@@ -60,7 +68,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ tag: s
   });
 
   return NextResponse.json({
-    followed: !existing,
+    followed,
     followers: Number(followers?.followers ?? 0),
   });
 }

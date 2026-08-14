@@ -16,6 +16,14 @@ describe("FixedWindowRateLimiter", () => {
     expect(limiter.allow("b", 0)).toBe(true);
     expect(limiter.allow("a", 1)).toBe(false);
   });
+
+  test("resets a key after a successful operation", () => {
+    const limiter = new FixedWindowRateLimiter(1, 1_000);
+    expect(limiter.allow("user", 0)).toBe(true);
+    expect(limiter.allow("user", 1)).toBe(false);
+    limiter.reset("user");
+    expect(limiter.allow("user", 2)).toBe(true);
+  });
 });
 
 test("requestClientKey selects the first forwarded address", () => {

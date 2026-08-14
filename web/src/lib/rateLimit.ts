@@ -28,6 +28,10 @@ export class FixedWindowRateLimiter {
     return true;
   }
 
+  reset(key: string): void {
+    this.entries.delete(key);
+  }
+
   private prune(now: number) {
     for (const [key, entry] of this.entries) {
       if (entry.resetAt <= now || this.entries.size >= this.maxEntries) {

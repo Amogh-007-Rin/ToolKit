@@ -9,6 +9,9 @@ import { resolveStoredUrl } from "@/lib/storage";
 import { verifyPassword } from "@/lib/password";
 import { credentialsSchema } from "@/types/validation";
 import type { AuthOptions } from "next-auth";
+import { FixedWindowRateLimiter } from "@/lib/rateLimit";
+
+const credentialsLimiter = new FixedWindowRateLimiter(10, 15 * 60_000);
 
 export const NEXT_AUTH_CONFIG: AuthOptions = {
     adapter: PrismaAdapter(),
@@ -24,11 +27,17 @@ export const NEXT_AUTH_CONFIG: AuthOptions = {
                 if (!parsed.success) return null;
                 const { email, password } = parsed.data;
 
+                if (!credentialsLimiter.allow(email)) {
+                    throw new Error("TooManyAttempts");
+                }
+
                 const user = await prisma.user.findUnique({ where: { email } });
                 if (!user?.password) return null;
 
                 const isValid = await verifyPassword(password, user.password);
                 if (!isValid) return null;
+
+                credentialsLimiter.reset(email);
 
                 return {
                     id: user.id,
@@ -84,7 +93,7 @@ export const NEXT_AUTH_CONFIG: AuthOptions = {
     },
     pages: {
     signIn: "/auth/signin", // Your custom sign-in page route
-    error: "/auth/error",  // You can also customize error/signout pages here
+    error: "/auth/signin",
     },
     
     secret: process.env.NEXTAUTH_SECRET

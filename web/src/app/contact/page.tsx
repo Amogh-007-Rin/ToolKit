@@ -1,6 +1,6 @@
 export default function ContactPage(){
     return(
-        <div className="bg-background w-screen h-screen flex items-center justify-center">
+        <div className="flex min-h-dvh w-full items-center justify-center bg-background p-4 text-center">
             CONTACT PAGE
         </div>
     );

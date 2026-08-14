@@ -6,9 +6,9 @@ import Spinner from "@/components/ui/loaders/Spinner";
 export default function Home() {
 
   return (
-    <div className="w-screen h-screen bg-background ">
+    <div className="min-h-dvh w-full bg-background">
       <Appbar/>
-      <div className="w-full h-[80%] flex items-center justify-center">
+      <div className="flex min-h-[80dvh] w-full items-center justify-center">
         <Spinner/>
       </div>
       

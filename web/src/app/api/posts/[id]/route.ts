@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { postCreateSchema } from "@/types/validation";
-import { assertValidKey, deleteObject, isStoredKey, resolveStoredUrl } from "@/lib/storage";
+import {
+  assertValidKey,
+  deleteObject,
+  isOwnedObjectKey,
+  isStoredKey,
+  resolveStoredUrl,
+} from "@/lib/storage";
 import type { Prisma } from "../../../../../generated/prisma/client";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -85,8 +91,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       } catch {
         return NextResponse.json({ error: "Invalid media key" }, { status: 400 });
       }
-      if (!entry.key.startsWith("posts/")) {
-        return NextResponse.json({ error: "Media key must belong to posts" }, { status: 403 });
+      if (!isOwnedObjectKey(entry.key, userId, "posts")) {
+        return NextResponse.json({ error: "Media key does not belong to this user" }, { status: 403 });
       }
       newMediaIndex++;
     }
@@ -99,11 +105,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (totalVideos > 1) {
     return NextResponse.json({ error: "Only one video per post is allowed" }, { status: 400 });
   }
-  if (totalVideos === 1 && keepIds.size - removedMediaIds.length + newMediaCount > 1) {
+  if (totalVideos === 1 && keepIds.size + newMediaCount > 1) {
     return NextResponse.json({ error: "A video cannot be combined with other media" }, { status: 400 });
   }
 
-  const remainingCount = post.media.length - removedMediaIds.length + newMediaCount;
+  const remainingCount = keepIds.size + newMediaCount;
   if (remainingCount <= 0) {
     return NextResponse.json({ error: "A post must have at least one image or video" }, { status: 400 });
   }
@@ -140,7 +146,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     ]);
 
     for (const m of removedMedia) {
-      if (isStoredKey(m.url)) {
+      if (isStoredKey(m.url) && isOwnedObjectKey(m.url, userId, "posts")) {
         await deleteObject(m.url).catch(() => {});
       }
     }
@@ -187,7 +193,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   await prisma.post.delete({ where: { id } });
 
   for (const m of post.media) {
-    if (isStoredKey(m.url)) {
+    if (isStoredKey(m.url) && isOwnedObjectKey(m.url, userId, "posts")) {
       await deleteObject(m.url).catch(() => {});
     }
   }

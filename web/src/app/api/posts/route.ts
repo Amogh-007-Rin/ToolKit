@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { postCreateSchema } from "@/types/validation";
-import { assertValidKey, resolveStoredUrl } from "@/lib/storage";
+import { assertValidKey, isOwnedObjectKey, resolveStoredUrl } from "@/lib/storage";
 
 export async function GET(req: Request) {
   const userId = await getSessionUserId();
@@ -100,8 +100,8 @@ export async function POST(req: Request) {
     } catch {
       return NextResponse.json({ error: "Invalid media key" }, { status: 400 });
     }
-    if (!key.startsWith("posts/")) {
-      return NextResponse.json({ error: "Media key must belong to posts" }, { status: 403 });
+    if (!isOwnedObjectKey(key, userId, "posts")) {
+      return NextResponse.json({ error: "Media key does not belong to this user" }, { status: 403 });
     }
     mediaInput.push({ key, type, order: typeof order === "number" && order >= 0 ? order : mediaInput.length });
   }

@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { scope, roomId, contentType, size } = body;
-  if (!scope || !contentType || typeof size !== "number" || size < 0) {
+  if (!scope || !contentType || typeof size !== "number" || !Number.isSafeInteger(size) || size <= 0) {
     return NextResponse.json({ error: "missing scope, contentType or size" }, { status: 400 });
   }
 
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       prefix = `chat/${roomId}`;
       break;
     case "post":
-      prefix = "posts";
+      prefix = `posts/${userId}`;
       break;
     case "profile":
       prefix = `profile/${userId}`;
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const key = newObjectKey(prefix, contentType);
-    const { uploadUrl, expiresAt } = await createPresignedPut(key, contentType);
+    const { uploadUrl, expiresAt } = await createPresignedPut(key, contentType, size);
     return NextResponse.json({ key, kind, uploadUrl, expiresAt });
   } catch (error) {
     return NextResponse.json(

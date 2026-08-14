@@ -89,6 +89,10 @@ export function newObjectKey(prefix: string, contentType: string): string {
   return `${prefix}/${randomUUID()}.${extension}`;
 }
 
+export function isOwnedObjectKey(key: string, userId: string, scope: "posts" | "profile"): boolean {
+  return key.startsWith(`${scope}/${userId}/`);
+}
+
 export function assertValidKey(key: string): void {
   if (!key || key.length > 500 || key.includes("\\") || key.includes("..")) {
     throw new Error("invalid object key");
@@ -116,9 +120,18 @@ export async function resolveStoredUrl(value: string | null): Promise<string | n
 export async function createPresignedPut(
   key: string,
   contentType: string,
+  contentLength: number,
 ): Promise<{ uploadUrl: string; expiresAt: string }> {
   assertValidKey(key);
-  const command = new PutObjectCommand({ Bucket: getBucket(), Key: key, ContentType: contentType });
+  if (!Number.isSafeInteger(contentLength) || contentLength <= 0) {
+    throw new Error("invalid content length");
+  }
+  const command = new PutObjectCommand({
+    Bucket: getBucket(),
+    Key: key,
+    ContentType: contentType,
+    ContentLength: contentLength,
+  });
   const expiresIn = 5 * 60;
   const uploadUrl = await getSignedUrl(getClient(), command, { expiresIn });
   return { uploadUrl, expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString() };

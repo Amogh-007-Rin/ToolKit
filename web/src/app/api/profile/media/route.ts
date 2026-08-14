@@ -4,12 +4,13 @@ import { getSessionUserId } from "@/lib/session";
 import {
   assertValidKey,
   deleteObject,
+  isOwnedObjectKey,
   isStoredKey,
   resolveStoredUrl,
 } from "@/lib/storage";
 
-async function removeOldObject(value: string | null | undefined): Promise<void> {
-  if (!isStoredKey(value)) {
+async function removeOldObject(value: string | null | undefined, userId: string): Promise<void> {
+  if (!isStoredKey(value) || !isOwnedObjectKey(value as string, userId, "profile")) {
     return;
   }
   try {
@@ -79,10 +80,10 @@ export async function PATCH(req: Request) {
   });
 
   if (imageKey && user.image !== imageKey) {
-    await removeOldObject(user.image);
+    await removeOldObject(user.image, userId);
   }
   if (bannerKey && user.banner !== bannerKey) {
-    await removeOldObject(user.banner);
+    await removeOldObject(user.banner, userId);
   }
 
   const [image, banner] = await Promise.all([

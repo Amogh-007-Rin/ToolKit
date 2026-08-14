@@ -197,7 +197,6 @@ export default function Conversation({
   messages,
   tempMessages,
   typingUsers,
-  status,
   error,
   onlineUsers,
   lastSeenMap,
@@ -220,9 +219,19 @@ export default function Conversation({
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState<PendingMedia[]>([]);
   const [viewer, setViewer] = useState<{ url: string; kind: "image" | "video" } | null>(null);
+  const [now, setNow] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingStopTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const initialTimer = window.setTimeout(() => setNow(Date.now()), 0);
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(timer);
+    };
+  }, []);
   const typingActiveRef = useRef(false);
   const uploadSeqRef = useRef(0);
   const pendingRef = useRef<PendingMedia[]>([]);
@@ -235,10 +244,10 @@ export default function Conversation({
   let presenceLabel = "Offline";
   if (isOtherOnline) {
     presenceLabel = "Online";
-  } else if (lastSeenAt) {
+  } else if (lastSeenAt && now !== null) {
     const secondsAgo = Math.max(
       0,
-      (Date.now() - new Date(lastSeenAt).getTime()) / 1000,
+      (now - new Date(lastSeenAt).getTime()) / 1000,
     );
     const minutesAgo = Math.floor(secondsAgo / 60);
     if (minutesAgo < 1) {

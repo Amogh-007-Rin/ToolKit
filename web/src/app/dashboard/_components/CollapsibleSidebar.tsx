@@ -9,7 +9,6 @@ import {
   Search,
   Trash2,
   History,
-  Sparkles,
   MessageSquareText,
 } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";

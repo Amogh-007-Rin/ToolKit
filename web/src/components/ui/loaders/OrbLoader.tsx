@@ -17,6 +17,7 @@ import {
     Points,
     BufferGeometry,
     Float32BufferAttribute,
+    InstancedBufferAttribute,
     PointsMaterial,
     SphereGeometry,
     MeshBasicMaterial,
@@ -26,6 +27,7 @@ import {
     Vector3,
     AdditiveBlending,
     NormalBlending,
+    Material,
 } from "three"
 
 interface ParticleSphereRefactorProps {
@@ -61,8 +63,7 @@ function extractDefaultValue(cssVar: string): string {
     return fallback || cssVar
 }
 
-function resolveTokenColor(input: any): any {
-    if (typeof input !== "string") return input
+function resolveTokenColor(input: string): string {
     if (!input.startsWith("var(")) return input
     return extractDefaultValue(input)
 }
@@ -195,7 +196,6 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
         cursorRadiusUI = 75,
         cursorStrengthUI = 10,
         clickForce = 5,
-        sphereColor = "#FFFFFF",
         size,
         animated = true,
         style,
@@ -221,27 +221,22 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
     const strengthN = cursorConfig.strength / 10
     const containerRef = useRef<HTMLDivElement>(null)
     const zoomProbeRef = useRef<HTMLDivElement>(null)
-    const sceneRef = useRef<any>(null)
-    const cameraRef = useRef<any>(null)
-    const rendererRef = useRef<any>(null)
-    const particlesRef = useRef<any>(null)
-    const particlesGroupRef = useRef<any>(null)
+    const sceneRef = useRef<Scene | null>(null)
+    const cameraRef = useRef<PerspectiveCamera | null>(null)
+    const rendererRef = useRef<WebGLRenderer | null>(null)
+    const particlesRef = useRef<Points | InstancedMesh | null>(null)
+    const particlesGroupRef = useRef<Group | null>(null)
     const animationFrameRef = useRef<number | null>(null)
     const animateFnRef = useRef<(() => void) | null>(null)
     const startAnimationRef = useRef<(() => void) | null>(null)
     const animatedRef = useRef(true)
     const lastResizeRef = useRef({ ts: 0, zoom: 0, w: 0, h: 0, aspect: 0 })
     const mouseRef = useRef<{ x: number; y: number } | null>(null)
-    const baseParticlePositionsRef = useRef<any[]>([])
-    const particleDisplacementsRef = useRef<any[]>([])
-    const particleScatterVelocitiesRef = useRef<any[]>([])
+    const baseParticlePositionsRef = useRef<Vector3[]>([])
+    const particleDisplacementsRef = useRef<Vector3[]>([])
+    const particleScatterVelocitiesRef = useRef<Vector3[]>([])
 
-    // Check canvas mode ONCE at component mount and cache it
-    const isCanvasRef = useRef<boolean | null>(null)
-    if (isCanvasRef.current === null) {
-        isCanvasRef.current = RenderTarget.current() === RenderTarget.canvas
-    }
-    const isCanvas = isCanvasRef.current
+    const isCanvas = RenderTarget.current() === RenderTarget.canvas
 
     // Map UI speed to internal speed
     const rotationSpeed = React.useMemo(() => {
@@ -341,8 +336,6 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
         rendererRef.current = renderer
 
         // Parse color
-        const colorObj = new Color(sphereColor)
-
         // Create particles evenly distributed on sphere surface
         const vertices = []
 
@@ -368,8 +361,6 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
         const particleOpacity = sphereRgba.a
 
         // Red color for displaced particles
-        const redColor = new Color(1, 0, 0)
-
         for (let i = 0; i < particlesCount; i++) {
             // Use golden angle spiral for even distribution
             const y = 1 - (i / (particlesCount - 1)) * 2 // y goes from 1 to -1
@@ -393,7 +384,7 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
 
         // Create particles based on shape
         const particleShape = particlesConfig.shape || "sphere"
-        let particles: any
+        let particles: Points | InstancedMesh
 
         if (particleShape === "sphere") {
             // Round particles using actual sphere geometries with InstancedMesh
@@ -435,7 +426,7 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
                 instanceColors[idx + 1] = baseColorObj.g
                 instanceColors[idx + 2] = baseColorObj.b
             }
-            particles.instanceColor = new Float32BufferAttribute(
+            particles.instanceColor = new InstancedBufferAttribute(
                 instanceColors,
                 3
             )
@@ -590,7 +581,7 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
                 currentContainerWidth * canvasOverflowMultiplier
             const currentCanvasHeight =
                 currentContainerHeight * canvasOverflowMultiplier
-            const currentCamera = cameraRef.current
+            const currentCamera = camera
             const cursorRadiusSquared = cursorRadius * cursorRadius
 
             // Apply cursor repulsion to particles (only if enabled)
@@ -740,6 +731,7 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
 
             if (particleShape === "sphere" && particlesRef.current) {
                 // Update InstancedMesh positions
+                const instancedParticles = particlesRef.current as InstancedMesh
                 const matrix = new Matrix4()
 
                 for (
@@ -753,13 +745,13 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
                     finalPos.copy(basePos)
                     finalPos.add(displacement)
                     matrix.setPosition(finalPos.x, finalPos.y, finalPos.z)
-                    particlesRef.current.setMatrixAt(i, matrix)
+                    instancedParticles.setMatrixAt(i, matrix)
                 }
-                particlesRef.current.instanceMatrix.needsUpdate = true
+                instancedParticles.instanceMatrix.needsUpdate = true
             } else if (particleShape === "cube" && particlesRef.current) {
                 // Update Points geometry positions and colors
-                const positions =
-                    particlesRef.current.geometry.attributes.position
+                const pointParticles = particlesRef.current as Points
+                const positions = pointParticles.geometry.attributes.position
 
                 for (
                     let i = 0;
@@ -993,7 +985,7 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
                 clickContainerWidth * canvasOverflowMultiplier
             const clickCanvasHeight =
                 clickContainerHeight * canvasOverflowMultiplier
-            const currentCamera = cameraRef.current
+            const currentCamera = camera
 
             // Convert click point from screen space to 3D world space
             // Normalize click coordinates to NDC (Normalized Device Coordinates) using canvas dimensions
@@ -1116,7 +1108,7 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
                 touchContainerWidth * canvasOverflowMultiplier
             const touchCanvasHeight =
                 touchContainerHeight * canvasOverflowMultiplier
-            const currentCamera = cameraRef.current
+            const currentCamera = camera
 
             // Convert touch point from screen space to 3D world space
             // Normalize touch coordinates to NDC (Normalized Device Coordinates) using canvas dimensions
@@ -1360,8 +1352,8 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
                 }
                 if (rendererRef.current) {
                     rendererRef.current.dispose()
-                    if (containerRef.current && canvas.parentNode) {
-                        containerRef.current.removeChild(canvas)
+                    if (canvas.parentNode === container) {
+                        container.removeChild(canvas)
                     }
                 }
                 if (particlesRef.current) {
@@ -1370,7 +1362,7 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
                     }
                     if (particlesRef.current.material) {
                         if (Array.isArray(particlesRef.current.material)) {
-                            particlesRef.current.material.forEach((mat: any) =>
+                            particlesRef.current.material.forEach((mat: Material) =>
                                 mat.dispose()
                             )
                         } else {
@@ -1414,8 +1406,8 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
             }
             if (rendererRef.current) {
                 rendererRef.current.dispose()
-                if (containerRef.current && canvas.parentNode) {
-                    containerRef.current.removeChild(canvas)
+                if (canvas.parentNode === container) {
+                    container.removeChild(canvas)
                 }
             }
             if (particlesRef.current) {
@@ -1424,7 +1416,7 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
                 }
                 if (particlesRef.current.material) {
                     if (Array.isArray(particlesRef.current.material)) {
-                        particlesRef.current.material.forEach((mat: any) =>
+                        particlesRef.current.material.forEach((mat: Material) =>
                             mat.dispose()
                         )
                     } else {
@@ -1453,6 +1445,12 @@ export default function ParticleSphereRefactor(__props: ParticleSphereRefactorPr
         scaleMultiplier,
         particleSize,
         isCanvas,
+        speedN,
+        smoothingN,
+        dragN,
+        particlesConfig.shape,
+        cursorConfig.enabled,
+        cursorConfig.clickForce,
     ])
 
     // Toggle the auto-rotation: only plays while the `animated` prop is true.

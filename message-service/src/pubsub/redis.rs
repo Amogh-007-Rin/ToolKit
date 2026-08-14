@@ -33,7 +33,7 @@ impl RedisBus {
     pub async fn listen(self: Arc<Self>, state: AppState) {
         let mut delay = Duration::from_secs(1);
         loop {
-            if let Err(error) = self.run_listener(&state).await {
+            if let Err(error) = self.run_listener(&state, &mut delay).await {
                 tracing::error!(%error, "redis pubsub listener disconnected");
             }
             tokio::time::sleep(delay).await;
@@ -41,9 +41,14 @@ impl RedisBus {
         }
     }
 
-    async fn run_listener(&self, state: &AppState) -> Result<(), AppError> {
+    async fn run_listener(
+        &self,
+        state: &AppState,
+        reconnect_delay: &mut Duration,
+    ) -> Result<(), AppError> {
         let mut pubsub = self.client.get_async_pubsub().await?;
         pubsub.psubscribe("room:*").await?;
+        *reconnect_delay = Duration::from_secs(1);
         tracing::info!("subscribed to room:* channels");
         let mut stream = pubsub.into_on_message();
         while let Some(message) = stream.next().await {

@@ -22,7 +22,7 @@ pub enum Outgoing {
 #[derive(Debug)]
 pub struct Session {
     pub user_id: UserId,
-    pub tx: mpsc::UnboundedSender<Outgoing>,
+    pub tx: mpsc::Sender<Outgoing>,
     pub rooms: DashSet<RoomId>,
 }
 
@@ -59,12 +59,7 @@ impl AppState {
         let _ = self.shutdown_tx.send(());
     }
 
-    pub fn register_session(
-        &self,
-        conn_id: ConnId,
-        user_id: UserId,
-        tx: mpsc::UnboundedSender<Outgoing>,
-    ) {
+    pub fn register_session(&self, conn_id: ConnId, user_id: UserId, tx: mpsc::Sender<Outgoing>) {
         let session = Session {
             user_id,
             tx,
@@ -78,6 +73,11 @@ impl AppState {
             for room in session.rooms.iter() {
                 if let Some(connections) = self.room_connections.get(room.key()) {
                     connections.remove(&conn_id);
+                    let empty = connections.is_empty();
+                    drop(connections);
+                    if empty {
+                        self.room_connections.remove(room.key());
+                    }
                 }
             }
             let has_other_connections = self
@@ -114,12 +114,19 @@ impl AppState {
         }
         if let Some(connections) = self.room_connections.get(room_id) {
             connections.remove(&conn_id);
+            let empty = connections.is_empty();
+            drop(connections);
+            if empty {
+                self.room_connections.remove(room_id);
+            }
         }
     }
 
     pub fn send_to_conn(&self, conn_id: ConnId, event: ServerEvent) {
-        if let Some(session) = self.sessions.get(&conn_id) {
-            let _ = session.tx.send(Outgoing::Event(event));
+        if let Some(session) = self.sessions.get(&conn_id)
+            && session.tx.try_send(Outgoing::Event(event)).is_err()
+        {
+            tracing::warn!(%conn_id, "dropping websocket event for a saturated connection");
         }
     }
 

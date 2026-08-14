@@ -91,10 +91,7 @@ async fn list_rooms(
         rows.into_iter()
             .map(|row| {
                 let room_id = row.id.clone();
-                let members = members_by_room
-                    .get(&room_id)
-                    .cloned()
-                    .unwrap_or_default();
+                let members = members_by_room.get(&room_id).cloned().unwrap_or_default();
                 let member_last_seen: HashMap<String, Option<String>> = members
                     .iter()
                     .map(|member_id| {

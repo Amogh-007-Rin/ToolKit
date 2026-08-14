@@ -43,3 +43,48 @@ pub async fn authenticate(
     }
     Ok(user_id)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::{HeaderValue, header};
+
+    #[test]
+    fn query_token_takes_precedence() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_static("Bearer header-token"),
+        );
+        let query = TokenQuery {
+            token: Some("query-token".into()),
+        };
+        assert_eq!(
+            extract_token(&headers, &query).as_deref(),
+            Some("query-token")
+        );
+    }
+
+    #[test]
+    fn extracts_case_insensitive_bearer_prefix() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_static("bearer token"),
+        );
+        assert_eq!(
+            extract_token(&headers, &TokenQuery { token: None }).as_deref(),
+            Some("token")
+        );
+    }
+
+    #[test]
+    fn rejects_other_authorization_schemes() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_static("Basic token"),
+        );
+        assert!(extract_token(&headers, &TokenQuery { token: None }).is_none());
+    }
+}

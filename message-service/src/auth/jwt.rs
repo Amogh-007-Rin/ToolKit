@@ -77,14 +77,15 @@ pub fn verify_token(token: &str, secret: &str) -> Result<Claims, AppError> {
         .map_err(|_| AppError::Auth("invalid token: decryption failed".into()))?;
     let claims: Claims = serde_json::from_slice(&plaintext)
         .map_err(|error| AppError::Auth(format!("invalid token payload: {error}")))?;
-    if let Some(exp) = claims.exp {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|duration| duration.as_secs() as i64)
-            .unwrap_or_default();
-        if now > exp + CLOCK_TOLERANCE_SECS {
-            return Err(AppError::Auth("token expired".into()));
-        }
+    let exp = claims
+        .exp
+        .ok_or_else(|| AppError::Auth("token does not contain an expiry".into()))?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or_default();
+    if now > exp + CLOCK_TOLERANCE_SECS {
+        return Err(AppError::Auth("token expired".into()));
     }
     Ok(claims)
 }
@@ -179,5 +180,12 @@ mod tests {
     #[test]
     fn rejects_malformed_token() {
         assert!(verify_token("not-a-jwe", "secret").is_err());
+    }
+
+    #[test]
+    fn rejects_token_without_expiry() {
+        let secret = "super-secret-secret-secret-secret-secret";
+        let token = encrypt(secret, serde_json::json!({ "sub": "user-sub" }));
+        assert!(verify_token(&token, secret).is_err());
     }
 }

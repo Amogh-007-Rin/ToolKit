@@ -13,10 +13,11 @@ use uuid::Uuid;
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(15);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
+const OUTBOUND_QUEUE_CAPACITY: usize = 256;
 
 pub async fn run(state: AppState, socket: WebSocket, conn_id: ConnId, user_id: String) {
     let (mut sink, mut stream) = socket.split();
-    let (tx, mut rx) = mpsc::unbounded_channel::<Outgoing>();
+    let (tx, mut rx) = mpsc::channel::<Outgoing>(OUTBOUND_QUEUE_CAPACITY);
 
     state.register_session(conn_id, user_id.clone(), tx.clone());
     state.send_to_conn(
@@ -51,7 +52,7 @@ pub async fn run(state: AppState, socket: WebSocket, conn_id: ConnId, user_id: S
     loop {
         tokio::select! {
             _ = shutdown_rx.recv() => {
-                let _ = tx.send(Outgoing::Close);
+                let _ = tx.try_send(Outgoing::Close);
                 break;
             }
             frame = stream.next() => {
@@ -73,10 +74,13 @@ pub async fn run(state: AppState, socket: WebSocket, conn_id: ConnId, user_id: S
             _ = heartbeat.tick() => {
                 if last_frame.elapsed() >= CLIENT_TIMEOUT {
                     tracing::info!(%conn_id, %user_id, "dropping stale websocket connection");
-                    let _ = tx.send(Outgoing::Close);
+                    let _ = tx.try_send(Outgoing::Close);
                     break;
                 }
-                let _ = tx.send(Outgoing::Ping);
+                if tx.try_send(Outgoing::Ping).is_err() {
+                    tracing::warn!(%conn_id, %user_id, "closing saturated websocket connection");
+                    break;
+                }
             }
         }
     }
@@ -217,9 +221,13 @@ async fn handle_typing(
     if !valid_id(&room_id) {
         return;
     }
-    if let Err(error) = db::is_member(&state.db, &room_id, user_id).await {
-        tracing::warn!(%error, %room_id, %user_id, "failed to check membership for typing event");
-        return;
+    match db::is_member(&state.db, &room_id, user_id).await {
+        Ok(true) => {}
+        Ok(false) => return,
+        Err(error) => {
+            tracing::warn!(%error, %room_id, %user_id, "failed to check membership for typing event");
+            return;
+        }
     }
     let event = if typing {
         ServerEvent::TypingStart {
@@ -321,12 +329,13 @@ async fn handle_send_message(
             return;
         }
         Err(error) => {
+            tracing::warn!(%error, %room_id, %user_id, "failed to check room membership");
             ack_failure(
                 state,
                 conn_id,
                 &room_id,
                 temp_id.as_deref(),
-                &error.to_string(),
+                "unable to verify room membership",
             );
             return;
         }
@@ -421,4 +430,38 @@ fn valid_attachment(attachment: &db::models::Attachment) -> bool {
         return false;
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validates_identifiers_at_boundaries() {
+        assert!(!valid_id(""));
+        assert!(valid_id(&"a".repeat(MAX_ID_LEN)));
+        assert!(!valid_id(&"a".repeat(MAX_ID_LEN + 1)));
+    }
+
+    #[test]
+    fn validates_attachment_shape_and_limits() {
+        let valid = db::models::Attachment {
+            key: "chat/room/file.jpg".into(),
+            kind: "image".into(),
+            name: Some("file.jpg".into()),
+        };
+        assert!(valid_attachment(&valid));
+
+        let mut invalid = valid.clone();
+        invalid.kind = "document".into();
+        assert!(!valid_attachment(&invalid));
+
+        invalid = valid.clone();
+        invalid.key = "a".repeat(MAX_ATTACHMENT_KEY_LEN + 1);
+        assert!(!valid_attachment(&invalid));
+
+        invalid = valid;
+        invalid.name = Some("a".repeat(MAX_ATTACHMENT_NAME_LEN + 1));
+        assert!(!valid_attachment(&invalid));
+    }
 }

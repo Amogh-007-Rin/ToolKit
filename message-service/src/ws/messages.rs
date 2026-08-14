@@ -83,3 +83,33 @@ impl ServerEvent {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serializes_events_with_camel_case_fields() {
+        let json = ServerEvent::Joined {
+            room_id: "room-1".into(),
+        }
+        .to_json();
+        assert_eq!(json, r#"{"type":"joined","roomId":"room-1"}"#);
+    }
+
+    #[test]
+    fn excludes_typing_event_author_only() {
+        let event = ServerEvent::TypingStart {
+            room_id: "room-1".into(),
+            user_id: "user-1".into(),
+        };
+        assert_eq!(event.exclude_user(), Some("user-1"));
+        assert_eq!(
+            ServerEvent::Joined {
+                room_id: "room-1".into()
+            }
+            .exclude_user(),
+            None
+        );
+    }
+}

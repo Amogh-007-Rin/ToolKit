@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import AnimatedLogo from "./dashboard/_components/AnimatedLogo";
+import { useRouter } from "next/navigation";
 
 /* ============================================================
    TYPES
@@ -228,6 +230,7 @@ function roundedRect(
 ============================================================ */
 
 export default function NotFound() {
+  const router = useRouter();
   const canvasRef =
     useRef<HTMLCanvasElement | null>(
       null,
@@ -2051,8 +2054,12 @@ export default function NotFound() {
           font-medium
           leading-none
           tracking-widest
+          flex
+          items-center
+          gap-2
         "
       >
+        <AnimatedLogo />
         TOOLKIT
       </div>
 
@@ -2085,6 +2092,7 @@ export default function NotFound() {
             hover:opacity-50
             tracking-wider
           "
+          onClick={() =>router.push("/")}
         >
           HOME
         </a>
@@ -2096,6 +2104,7 @@ export default function NotFound() {
             hover:opacity-50
             tracking-wider
           "
+          onClick={() =>router.push("/policy")}
         >
           POLICY
         </a>
@@ -2107,6 +2116,7 @@ export default function NotFound() {
             hover:opacity-50
             tracking-wider
           "
+          onClick={() =>router.push("/contact")}
         >
           CONTACT
         </a>
@@ -2118,6 +2128,7 @@ export default function NotFound() {
             hover:opacity-50
             tracking-wider
           "
+          onClick={() =>router.push("/auth/signin")}
         >
           SIGN IN
         </a>
@@ -2162,7 +2173,7 @@ export default function NotFound() {
             leading-none
           "
         >
-          •
+          PAGE NOT FOUND
         </div>
 
         <div

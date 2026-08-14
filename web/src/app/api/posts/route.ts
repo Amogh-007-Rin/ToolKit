@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     where,
     include: {
       media: { orderBy: { order: "asc" } },
-      user: { select: { name: true, tag: true } },
+      user: { select: { id: true, name: true, image: true, tag: true } },
       _count: { select: { likes: true, comments: true, saves: true } },
       likes: { where: { userId }, select: { id: true } },
       saves: { where: { userId }, select: { id: true } },
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   const resolved = await Promise.all(
     posts.map(async ({ _count, likes, saves, user, media, ...post }) => ({
       ...post,
-      author: user,
+      author: { ...user, image: await resolveStoredUrl(user.image) },
       media: await Promise.all(
         media.map(async (m) => ({ ...m, url: (await resolveStoredUrl(m.url)) as string })),
       ),

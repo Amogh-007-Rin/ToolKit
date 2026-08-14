@@ -25,7 +25,7 @@ export interface Post {
   caption: string;
   tags: string[];
   media: PostMedia[];
-  author: { name: string | null; tag: string | null };
+  author: PostUser;
   likeCount: number;
   commentCount: number;
   savedCount: number;

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { X, Bell } from "lucide-react";
 import Image from "next/image";
 import { timeAgo } from "@/lib/timeAgo";
+import Spinner from "@/components/ui/loaders/Spinner";
 
 interface AppNotification {
   id: string;
@@ -110,10 +111,10 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
       {isOpen && (
         <>
           <motion.div
-            className="fixed inset-0 z-40"
-            initial={{ backgroundColor: "rgba(0,0,0,0)" }}
-            animate={{ backgroundColor: isExpanding ? "rgba(0,0,0,1)" : "rgba(0,0,0,0.4)" }}
-            exit={{ backgroundColor: "rgba(0,0,0,0)" }}
+            className={`fixed inset-0 z-40 transition-colors duration-350 ${isExpanding ? "bg-background" : "bg-black/40"}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.35, ease: "easeInOut" }}
             onClick={isExpanding ? undefined : onClose}
           />
@@ -149,7 +150,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
               }}
             >
               <motion.div
-                className="relative bg-card shadow-2xl overflow-hidden"
+                className={`relative shadow-2xl overflow-hidden transition-colors duration-300 ${isExpanding ? "bg-background" : "bg-card"}`}
                 style={{ filter: "url(#slime-goo)" }}
                 animate={{
                   borderRadius: isExpanding ? "0px" : "0 0 24px 24px",
@@ -172,6 +173,8 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
               >
                 <motion.div
                   className="absolute top-0 left-0 right-0 h-28"
+                  animate={{ opacity: isExpanding ? 0 : 1 }}
+                  transition={{ duration: 0.2 }}
                   style={{
                     background:
                       "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)",
@@ -246,7 +249,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                     className="space-y-3 min-h-20"
                   >
                     {loading ? (
-                      <p className="text-muted-foreground text-center py-8">Loading...</p>
+                      <div className="flex justify-center py-8"><Spinner size="md" label="Loading notifications" /></div>
                     ) : notifications.length === 0 ? (
                       <motion.p
                         initial={{ opacity: 0 }}

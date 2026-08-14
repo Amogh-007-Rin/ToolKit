@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Bell, Loader2, UserRound, X } from "lucide-react";
+import { Bell, UserRound, X } from "lucide-react";
 import { timeAgo } from "@/lib/timeAgo";
+import Spinner from "@/components/ui/loaders/Spinner";
 
 interface AppNotification {
   id: string;
@@ -81,9 +82,9 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl text-foreground font-semibold">All Notifications</h1>
+    <div className="flex h-full min-h-0 w-full flex-col p-3 sm:p-6">
+      <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
+        <h1 className="text-xl font-semibold text-foreground sm:text-2xl">All Notifications</h1>
         {!loading && notifications.length > 0 && (
           <button
             onClick={clearAll}
@@ -96,7 +97,7 @@ export default function NotificationsPage() {
       <div className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden">
         {loading ? (
           <div className="w-full h-full flex items-center justify-center">
-            <Loader2 size={24} className="animate-spin text-muted-foreground" />
+            <Spinner size="lg" label="Loading notifications" />
           </div>
         ) : notifications.length === 0 ? (
           <div className="w-full h-full flex flex-col items-center justify-center gap-4">
@@ -116,7 +117,7 @@ export default function NotificationsPage() {
                   : { x: 0, opacity: 1 }
               }
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="flex items-center gap-3 rounded-2xl bg-card border border-border px-4 py-3 group"
+              className="group flex items-start gap-3 rounded-2xl border border-border bg-card px-3 py-3 sm:items-center sm:px-4"
             >
                 <div className="w-10 h-10 rounded-full bg-shade-background flex items-center justify-center overflow-hidden shrink-0">
                   {notification.actor.image ? (
@@ -147,7 +148,7 @@ export default function NotificationsPage() {
                 <button
                   onClick={() => clearNotification(notification.id)}
                   title="Clear notification"
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-500/10 transition-opacity cursor-pointer shrink-0"
+                  className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-opacity hover:bg-red-500/10 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <X size={14} />
                 </button>

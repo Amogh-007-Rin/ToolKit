@@ -3,6 +3,9 @@ import prisma from "@/db";
 import { hashPassword } from "@/lib/password";
 import { registerSchema } from "@/types/validation";
 import { Prisma } from "../../../../../generated/prisma/client";
+import { FixedWindowRateLimiter, requestClientKey } from "@/lib/rateLimit";
+
+const registerLimiter = new FixedWindowRateLimiter(5, 60_000);
 
 const FIELD_MESSAGES: Record<string, string> = {
   name: "Please enter a valid name",
@@ -11,6 +14,9 @@ const FIELD_MESSAGES: Record<string, string> = {
 };
 
 export async function POST(req: NextRequest) {
+  if (!registerLimiter.allow(requestClientKey(req))) {
+    return NextResponse.json({ error: "Too many registration attempts" }, { status: 429 });
+  }
   try {
     const body = await req.json();
     const parsed = registerSchema.safeParse(body);

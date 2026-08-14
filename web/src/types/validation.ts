@@ -22,7 +22,17 @@ export const toolCreateSchema = z.object({
   name: z.string().trim().min(1).max(120),
   link: z.string().trim().max(500).optional(),
   icon: z.string().trim().max(64).default("sparkles"),
-  logoUrl: z.string().trim().url().max(1000).nullable().optional(),
+  logoUrl: z
+    .string()
+    .trim()
+    .url()
+    .max(1000)
+    .refine((value) => {
+      const protocol = new URL(value).protocol;
+      return protocol === "http:" || protocol === "https:";
+    }, "Logo URL must use HTTP or HTTPS")
+    .nullable()
+    .optional(),
 });
 
 export const postCreateSchema = z.object({

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
+import { FixedWindowRateLimiter } from "@/lib/rateLimit";
 
 const MODEL = "gemini-3.1-flash-lite";
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -13,6 +14,7 @@ const CACHE_MAX = 50;
 const GROUNDING_ENABLED = process.env.GEMINI_WEB_SEARCH === "true";
 const RATE_LIMIT_MESSAGE =
   "AI search is rate-limited right now. Please wait a minute and try again.";
+const userLimiter = new FixedWindowRateLimiter(20, 60_000);
 
 interface AIResult {
   name: string;
@@ -131,6 +133,9 @@ export async function POST(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!userLimiter.allow(userId)) {
+    return NextResponse.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
   }
 
   if (!process.env.GEMINI_API_KEY) {

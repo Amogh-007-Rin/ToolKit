@@ -27,7 +27,7 @@ export default function Navbutton({ tag, icon, className, onClick, iconClassName
     return (
         <motion.button
             layout
-            className={`${tag ?? ""} w-[70%] h-[9%] rounded-2xl cursor-pointer flex items-center justify-center relative ${className ?? ""}`}
+            className={`${tag ?? ""} relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl md:h-[9%] md:w-[70%] md:rounded-2xl ${className ?? ""}`}
             onClick={onClick}
             whileTap={{ scale: 0.92 }}
         >

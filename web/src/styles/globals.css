@@ -84,6 +84,13 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+html,
+body {
+  min-width: 320px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 
 ::view-transition-old(root),
 ::view-transition-new(root) {

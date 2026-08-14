@@ -22,7 +22,7 @@ interface NotificationbuttonProps {
 export default function Notificationbutton({ onClick, count = 0 }: NotificationbuttonProps) {
     return (
         <motion.button
-            className="relative notification-btn w-14 h-14 rounded-full flex items-center justify-center cursor-pointer"
+            className="notification-btn relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full md:h-14 md:w-14"
             // 2. Set the initial state name
             initial="rest"
             // 3. Trigger the hover state name
@@ -39,7 +39,7 @@ export default function Notificationbutton({ onClick, count = 0 }: Notificationb
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                    className="absolute top-1 right-1 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center"
+                    className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white md:right-1 md:top-1 md:h-5 md:min-w-5 md:text-[10px]"
                 >
                     {count > 99 ? "99+" : count}
                 </motion.span>

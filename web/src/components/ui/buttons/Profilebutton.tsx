@@ -9,7 +9,7 @@ interface ProfilebuttonProps {
 export default function Profilebutton({ onClick, imageUrl, name }: ProfilebuttonProps) {
 
     return (
-        <button className="profile-btn w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden
+        <button className="profile-btn h-9 w-9 rounded-full bg-muted flex items-center justify-center overflow-hidden md:h-12 md:w-12
         cursor-pointer" onClick={onClick}>
             {imageUrl ? (
                 <Image src={imageUrl} alt={name ?? "Profile"} width={48} height={48} className="w-full h-full object-cover" unoptimized />

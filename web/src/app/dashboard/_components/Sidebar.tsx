@@ -109,11 +109,11 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="side-navigation w-[5%] h-full rounded-3xl bg-sidebar flex flex-col justify-center items-center p-2">
-      <div className="part-1 w-[90%] h-[10%] flex items-center justify-center">
+    <aside className="side-navigation order-2 flex h-14 w-full shrink-0 items-center overflow-hidden rounded-2xl bg-sidebar px-1.5 py-1 md:order-none md:h-full md:w-20 md:flex-col md:justify-center md:overflow-visible md:rounded-3xl md:p-2">
+      <div className="part-1 hidden w-[90%] items-center justify-center md:flex md:h-[10%]">
         <AnimatedLogo />
       </div>
-      <div className="part-2 w-[95%] h-[65%] flex flex-col items-center justify-center gap-4">
+      <nav className="part-2 flex h-full min-w-0 flex-1 items-center justify-around md:h-[65%] md:w-[95%] md:flex-col md:justify-center md:gap-4">
         {navItems.map((item) => (
           <Navbutton
             key={item.route}
@@ -126,10 +126,12 @@ export default function Sidebar() {
             badge={item.route === "/dashboard/messages" ? messageUnread : undefined}
           />
         ))}
-      </div>
-      <div className="part-3 w-[90%] h-[25%] flex flex-col justify-evenly items-center">
+      </nav>
+      <div className="part-3 flex h-full shrink-0 items-center md:h-[25%] md:w-[90%] md:flex-col md:justify-evenly">
         <Notificationbutton count={unreadCount} onClick={() => setShowNotifications(true)} />
-        <SignoutButton onClick={handleSignOut} />
+        <div className="hidden md:block">
+          <SignoutButton onClick={handleSignOut} />
+        </div>
         <Profilebutton
           onClick={() => router.push("/profile")}
           imageUrl={session?.user?.image}
@@ -143,6 +145,6 @@ export default function Sidebar() {
           fetchUnreadCount();
         }}
       />
-    </div>
+    </aside>
   );
 };

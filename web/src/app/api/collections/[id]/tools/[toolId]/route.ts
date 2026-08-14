@@ -23,7 +23,7 @@ export async function PATCH(
         );
     }
 
-    const { name, link, icon, logoUrl } = parsed.data;
+    const { name, link, icon, logoUrl, description, reason } = parsed.data;
 
     const collection = await prisma.collection.findFirst({
         where: { id, userId },
@@ -41,6 +41,8 @@ export async function PATCH(
             link: link?.trim() ? link.trim() : null,
             icon,
             logoUrl: logoUrl ?? null,
+            description: description || null,
+            reason: reason || null,
         },
     });
 
@@ -63,22 +65,20 @@ export async function DELETE(
 
     const { id, toolId } = await params;
 
-    const collection = await prisma.collection.findFirst({
-        where: { id, userId },
+    const tool = await prisma.tool.findFirst({
+        where: {
+            id: toolId,
+            collectionId: id,
+            collection: { userId },
+        },
         select: { id: true },
     });
 
-    if (!collection) {
-        return NextResponse.json({ error: "Collection not found" }, { status: 404 });
-    }
-
-    const result = await prisma.tool.deleteMany({
-        where: { id: toolId, collectionId: id },
-    });
-
-    if (result.count === 0) {
+    if (!tool) {
         return NextResponse.json({ error: "Tool not found" }, { status: 404 });
     }
+
+    await prisma.tool.delete({ where: { id: tool.id } });
 
     return NextResponse.json({ ok: true });
 }

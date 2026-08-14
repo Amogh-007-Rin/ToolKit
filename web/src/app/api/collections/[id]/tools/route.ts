@@ -28,7 +28,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return NextResponse.json({ error: "Collection not found" }, { status: 404 });
     }
 
-    const { name, icon, logoUrl } = parsed.data;
+    const { name, icon, logoUrl, description, reason } = parsed.data;
     const link = parsed.data.link?.trim() || null;
 
     const tool = await prisma.tool.create({
@@ -37,6 +37,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             link,
             icon,
             logoUrl: logoUrl ?? null,
+            description: description || null,
+            reason: reason || null,
             collectionId: id,
         },
     });

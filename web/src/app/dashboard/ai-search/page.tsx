@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import Lenis from "lenis";
@@ -68,16 +69,42 @@ function ToolLogo({ link, name }: { link: string; name: string }) {
   return (
     <div className="w-10 h-10 rounded-full bg-shade-background flex items-center justify-center shrink-0 overflow-hidden">
       {!failed ? (
-        <img
+        <Image
           src={faviconUrl(link) ?? ""}
           alt={`${name} logo`}
+          width={40}
+          height={40}
+          unoptimized
           className="w-full h-full object-cover"
-          loading="lazy"
           onError={() => setFailed(true)}
         />
       ) : (
         <Icon size={18} className="text-foreground" />
       )}
+    </div>
+  );
+}
+
+function UserAvatar({ src, name }: { src: string | null; name: string }) {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    return (
+      <Image
+        src={src}
+        alt={`${name} profile image`}
+        width={32}
+        height={32}
+        unoptimized
+        className="w-8 h-8 rounded-full object-cover shrink-0"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div className="w-8 h-8 rounded-full bg-shade-background flex items-center justify-center shrink-0">
+      <span className="text-xs font-semibold text-foreground">
+        {name.charAt(0).toUpperCase() || "?"}
+      </span>
     </div>
   );
 }
@@ -474,19 +501,7 @@ function MessageBubble({
           <div className="bg-foreground text-card rounded-3xl rounded-br-lg px-5 py-3 text-[15px] leading-relaxed whitespace-pre-wrap">
             {message.content}
           </div>
-          {sessionImage ? (
-            <img
-              src={sessionImage}
-              alt="you"
-              className="w-8 h-8 rounded-full object-cover shrink-0"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-shade-background flex items-center justify-center shrink-0">
-              <span className="text-xs font-semibold text-foreground">
-                {sessionName.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
+          <UserAvatar key={sessionImage ?? "no-avatar"} src={sessionImage} name={sessionName} />
         </div>
       </div>
     );

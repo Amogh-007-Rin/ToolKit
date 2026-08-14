@@ -159,7 +159,6 @@ export async function POST(req: Request) {
   if (query.length > 200) {
     return NextResponse.json({ error: "Query is too long" }, { status: 400 });
   }
-
   const chatId = body.chatId?.trim() || null;
   let history: HistoryTurn[] = [];
   if (chatId) {

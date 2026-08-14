@@ -8,7 +8,6 @@ import { motion } from "framer-motion";
 import Lenis from "lenis";
 import {
   ArrowUp,
-  Loader2,
   ExternalLink,
   BookmarkPlus,
   Check,
@@ -18,6 +17,7 @@ import {
 import { TOOL_ICONS } from "../_components/tool-icons";
 import AnimatedLogo from "../_components/AnimatedLogo";
 import OrbLoader from "@/components/ui/loaders/OrbLoader";
+import Spinner from "@/components/ui/loaders/Spinner";
 import { DotMatrix } from "@/components/assistant-ui/dot-matrix";
 import CollapsibleSidebar, {
   type ChatMeta,
@@ -67,15 +67,15 @@ function ToolLogo({ link, name }: { link: string; name: string }) {
   const [failed, setFailed] = useState(false);
   const Icon = TOOL_ICONS.sparkles;
   return (
-    <div className="w-10 h-10 rounded-full bg-shade-background flex items-center justify-center shrink-0 overflow-hidden">
+    <div className="w-12 h-12 rounded-2xl border border-border/70 bg-transparent flex items-center justify-center shrink-0 overflow-hidden">
       {!failed ? (
         <Image
           src={faviconUrl(link) ?? ""}
           alt={`${name} logo`}
-          width={40}
-          height={40}
+          width={48}
+          height={48}
           unoptimized
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           onError={() => setFailed(true)}
         />
       ) : (
@@ -328,7 +328,9 @@ export default function AISearchPage() {
       name: result.name,
       link: result.link,
       icon: "sparkles",
-      logoUrl: null,
+      logoUrl: faviconUrl(result.link),
+      description: result.description,
+      reason: result.reason,
     });
     setSavingTo(null);
   };
@@ -336,7 +338,7 @@ export default function AISearchPage() {
   return (
     <div className="w-full h-full flex overflow-hidden">
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden relative">
-        <div className="shrink-0 flex items-center justify-between px-8 pt-5 pb-2">
+        <div className="flex shrink-0 items-center justify-between px-3 pb-2 pt-3 sm:px-8 sm:pt-5">
           <div className="flex items-center gap-3">
             <AnimatedLogo size={28} />
             <h1 className="text-lg text-foreground font-semibold">Toolkit AI</h1>
@@ -348,11 +350,11 @@ export default function AISearchPage() {
           data-lenis-wrapper
           className="flex-1 overflow-y-auto scrollbar-none"
         >
-        <div ref={contentRef} className="w-full max-w-280 mx-auto px-6 pb-4">
+        <div ref={contentRef} className="mx-auto w-full max-w-280 px-3 pb-4 sm:px-6">
           {messages.length === 0 ? (
-            <div className="h-full min-h-[50vh] flex flex-col items-center justify-center gap-8">
+            <div className="flex h-full min-h-[50vh] flex-col items-center justify-center gap-6 sm:gap-8">
               <div className="flex flex-col items-center gap-4 text-center">
-                <h2 className="text-2xl text-foreground font-light leading-1.5 tracking-wide">
+                <h2 className="text-xl font-light leading-1.5 tracking-wide text-foreground sm:text-2xl">
                   What kind of tools should i find you today ?
                 </h2>
                 <p className="text-sm text-muted-foreground max-w-md font-thin">
@@ -415,8 +417,8 @@ export default function AISearchPage() {
         />
       </div>
 
-      <div className="shrink-0 w-full flex justify-center px-6 pb-6 pt-2">
-        <div className="w-full max-w-250 flex items-end gap-2 bg-card border border-border rounded-[28px] px-5 py-2.5 shadow-sm focus-within:border-theme-button-insider/20 focus-within:shadow-md transition-all">
+      <div className="flex w-full shrink-0 justify-center px-2 pb-2 pt-2 sm:px-6 sm:pb-6">
+        <div className="flex w-full max-w-250 items-end gap-2 rounded-[24px] border border-border bg-card px-3 py-2.5 shadow-sm transition-all focus-within:border-theme-button-insider/20 focus-within:shadow-md sm:rounded-[28px] sm:px-5">
           <div className="self-center flex">
             <OrbLoader size={32} drag={false} cursorOn={false} animated={isTyping} />
           </div>
@@ -445,7 +447,7 @@ export default function AISearchPage() {
             aria-label="Send"
           >
             {loading ? (
-              <Loader2 size={18} className="animate-spin" />
+              <Spinner size="xs" label="Searching" />
             ) : (
               <ArrowUp size={18} />
             )}
@@ -531,9 +533,12 @@ function MessageBubble({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="bg-card rounded-2xl p-4 border border-border hover:border-primary/40 transition-colors flex flex-col gap-2.5"
+                    className={`font-sans group relative min-h-72 bg-linear-to-br from-card via-card to-primary/6 rounded-3xl p-5 border border-border/80 hover:-translate-y-1 hover:border-primary/40 transition-all duration-300 flex flex-col gap-4 ${
+                      openMenu === key ? "relative z-20" : ""
+                    }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-primary/10 blur-3xl opacity-60 transition-opacity group-hover:opacity-100" />
+                    <div className="relative flex items-center gap-3 min-w-0">
                       <ToolLogo link={result.link} name={result.name} />
                       <div className="min-w-0 flex-1">
                         <p className="text-foreground font-semibold truncate">
@@ -543,7 +548,7 @@ function MessageBubble({
                           href={result.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-primary hover:underline truncate"
+                          className="mt-1 flex items-center gap-1 text-xs text-primary hover:underline truncate"
                         >
                           <ExternalLink size={11} className="shrink-0" />
                           <span className="truncate">{hostOf(result.link)}</span>
@@ -551,27 +556,32 @@ function MessageBubble({
                       </div>
                     </div>
                     {result.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                      <p className="relative text-sm leading-5 text-muted-foreground line-clamp-3">
                         {result.description}
                       </p>
                     )}
                     {result.reason && (
-                      <p className="text-[13px] text-muted-foreground/80 line-clamp-2">
-                        {result.reason}
-                      </p>
+                      <div className="relative rounded-2xl border border-primary/10 bg-primary/6 px-3 py-2.5">
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                          Use case
+                        </p>
+                        <p className="text-xs leading-4 text-foreground/80 line-clamp-2">
+                          {result.reason}
+                        </p>
+                      </div>
                     )}
-                    <div className="relative mt-auto pt-1">
+                    <div className="relative mt-auto border-t border-border/70 pt-3">
                       {saved ? (
-                        <span className="w-full h-8 px-3.5 rounded-xl bg-primary/10 text-primary text-xs font-medium flex items-center justify-center gap-1.5">
+                        <span className="w-full h-9 px-3.5 rounded-xl border border-primary/15 bg-primary/10 text-primary text-xs font-medium flex items-center justify-center gap-1.5">
                           <Check size={13} /> Saved
                         </span>
                       ) : (
                         <button
                           onClick={() => onToggleMenu(key)}
-                          className="w-full h-8 px-3.5 bg-shade-background text-foreground rounded-xl text-xs font-medium hover:bg-muted/60 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                          className="w-full h-9 px-3.5 bg-foreground text-card rounded-xl text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           {savingTo === result.name ? (
-                            <Loader2 size={13} className="animate-spin" />
+                            <Spinner size="xs" label="Saving to collection" />
                           ) : (
                             <BookmarkPlus size={13} />
                           )}
@@ -579,7 +589,7 @@ function MessageBubble({
                         </button>
                       )}
                         {openMenu === key && !saved && (
-                          <div className="absolute right-0 top-10 z-20 w-60 bg-card border border-border rounded-xl shadow-lg p-1.5 flex flex-col max-h-64 overflow-y-auto">
+                          <div className="absolute right-0 bottom-12 z-20 w-60 bg-card border border-border rounded-2xl shadow-lg p-1.5 flex flex-col max-h-64 overflow-y-auto">
                             <p className="text-xs text-muted-foreground px-2 py-1.5">
                               Save to collection
                             </p>

@@ -377,7 +377,7 @@ function MessagesApp() {
     : [];
 
   return (
-    <div className="w-full h-full flex flex-col md:flex-row gap-4">
+    <div className="flex h-full min-h-0 w-full gap-2 md:flex-row md:gap-4">
       <RoomList
         rooms={rooms}
         contacts={contacts}
@@ -385,20 +385,22 @@ function MessagesApp() {
         activeRoomId={activeRoomId}
         onSelect={openRoom}
       />
-      <Conversation
-        room={activeRoom}
-        contact={activeContact}
-        meId={meId}
-        messages={activeRoomId ? (messagesByRoom[activeRoomId] ?? []) : []}
-        tempMessages={tempMessages}
-        typingUsers={activeTypingUserIds}
-        status={status}
-        error={error}
-        onlineUsers={onlineUsers}
-        lastSeenMap={lastSeenMap}
-        onSend={sendMessage}
-        onTypingChange={sendTyping}
-      />
+      <div className={`${activeRoomId ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-1`}>
+        <Conversation
+          room={activeRoom}
+          contact={activeContact}
+          meId={meId}
+          messages={activeRoomId ? (messagesByRoom[activeRoomId] ?? []) : []}
+          tempMessages={tempMessages}
+          typingUsers={activeTypingUserIds}
+          status={status}
+          error={error}
+          onlineUsers={onlineUsers}
+          lastSeenMap={lastSeenMap}
+          onSend={sendMessage}
+          onTypingChange={sendTyping}
+        />
+      </div>
     </div>
   );
 }

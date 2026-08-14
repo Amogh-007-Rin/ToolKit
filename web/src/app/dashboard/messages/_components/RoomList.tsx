@@ -55,7 +55,7 @@ export default function RoomList({
   onSelect: (roomId: string) => void;
 }) {
   return (
-    <aside className="w-full md:w-75 shrink-0 h-full bg-card rounded-3xl flex flex-col overflow-hidden">
+    <aside className={`${activeRoomId ? "hidden md:flex" : "flex"} h-full w-full shrink-0 flex-col overflow-hidden rounded-3xl bg-card md:w-75`}>
       <div className="px-5 py-4 border-b border-border">
         <h2 className="text-xl font-bold text-foreground">Messages</h2>
       </div>

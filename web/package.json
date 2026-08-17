@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "prisma generate",
     "dev": "bun --bun next dev --hostname 0.0.0.0",
+    "prebuild": "prisma generate",
     "build": "bun --bun next build",
     "start": "bun --bun next start",
     "lint": "eslint",

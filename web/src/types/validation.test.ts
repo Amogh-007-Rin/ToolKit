@@ -27,4 +27,15 @@ describe("request schemas", () => {
     expect(toolCreateSchema.safeParse({ name: "Tool", logoUrl: "javascript:alert(1)" }).success)
       .toBe(false);
   });
+
+  test("enforces profile information limits", () => {
+    const profile = { name: "User", bio: "", role: "", location: "", skills: [], tag: null };
+
+    expect(profileUpdateSchema.safeParse({ ...profile, name: "n".repeat(30) }).success).toBe(true);
+    expect(profileUpdateSchema.safeParse({ ...profile, name: "n".repeat(31) }).success).toBe(false);
+    expect(profileUpdateSchema.safeParse({ ...profile, role: "r".repeat(31) }).success).toBe(false);
+    expect(profileUpdateSchema.safeParse({ ...profile, location: "l".repeat(40) }).success).toBe(true);
+    expect(profileUpdateSchema.safeParse({ ...profile, location: "l".repeat(41) }).success).toBe(false);
+    expect(profileUpdateSchema.safeParse({ ...profile, skills: Array(6).fill("skill") }).success).toBe(false);
+  });
 });

@@ -47,14 +47,14 @@ export const commentCreateSchema = z.object({
 });
 
 export const profileUpdateSchema = z.object({
-  name: z.string().trim().min(1).max(100),
+  name: z.string().trim().min(1).max(30),
   bio: z.string().trim().max(400).refine(
     (value) => (value.match(/\S+/g) ?? []).length <= 40,
     "Bio must be 40 words or fewer",
   ).default(""),
-  role: z.string().trim().max(200).default(""),
-  location: z.string().trim().max(200).default(""),
-  skills: z.array(z.string().trim().min(1).max(50)).max(20).default([]),
+  role: z.string().trim().max(30).default(""),
+  location: z.string().trim().max(40).default(""),
+  skills: z.array(z.string().trim().min(1).max(50)).max(5).default([]),
   tag: z
     .string()
     .trim()

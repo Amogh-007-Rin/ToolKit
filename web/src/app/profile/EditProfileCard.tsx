@@ -13,6 +13,10 @@ interface EditProfileCardProps {
 }
 
 const BIO_WORD_LIMIT = 40;
+const NAME_CHARACTER_LIMIT = 30;
+const ROLE_CHARACTER_LIMIT = 30;
+const LOCATION_CHARACTER_LIMIT = 40;
+const SKILL_LIMIT = 5;
 
 const limitWords = (value: string) => {
   const words = value.match(/\S+/g) ?? [];
@@ -20,11 +24,11 @@ const limitWords = (value: string) => {
 };
 
 export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit }: EditProfileCardProps) {
-  const [name, setName] = useState(initialData.name);
+  const [name, setName] = useState(initialData.name.slice(0, NAME_CHARACTER_LIMIT));
   const [bio, setBio] = useState(initialData.bio);
-  const [role, setRole] = useState(initialData.role);
-  const [location, setLocation] = useState(initialData.location);
-  const [skills, setSkills] = useState<string[]>(initialData.skills);
+  const [role, setRole] = useState(initialData.role.slice(0, ROLE_CHARACTER_LIMIT));
+  const [location, setLocation] = useState(initialData.location.slice(0, LOCATION_CHARACTER_LIMIT));
+  const [skills, setSkills] = useState<string[]>(initialData.skills.slice(0, SKILL_LIMIT));
   const [tag, setTag] = useState(initialData.tag ?? "");
   const [skillInput, setSkillInput] = useState("");
 
@@ -43,7 +47,7 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
 
   const addSkill = () => {
     const trimmed = skillInput.trim();
-    if (!trimmed || skills.includes(trimmed)) return;
+    if (!trimmed || skills.includes(trimmed) || skills.length >= SKILL_LIMIT) return;
     setSkills([...skills, trimmed]);
     setSkillInput("");
   };
@@ -114,8 +118,12 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
                     placeholder="Your name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    maxLength={NAME_CHARACTER_LIMIT}
                     className="w-full h-12 bg-input border border-border rounded-xl px-4 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
                   />
+                  <p className="text-right text-xs text-muted-foreground">
+                    {name.length}/{NAME_CHARACTER_LIMIT} characters
+                  </p>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-sm text-muted-foreground font-medium">Bio</label>
@@ -137,8 +145,12 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
                     placeholder="e.g. Software Engineer"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
+                    maxLength={ROLE_CHARACTER_LIMIT}
                     className="w-full h-12 bg-input border border-border rounded-xl px-4 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
                   />
+                  <p className="text-right text-xs text-muted-foreground">
+                    {role.length}/{ROLE_CHARACTER_LIMIT} characters
+                  </p>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-sm text-muted-foreground font-medium">Location</label>
@@ -147,11 +159,15 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
                     placeholder="e.g. Birmingham, United Kingdom"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
+                    maxLength={LOCATION_CHARACTER_LIMIT}
                     className="w-full h-12 bg-input border border-border rounded-xl px-4 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
                   />
+                  <p className="text-right text-xs text-muted-foreground">
+                    {location.length}/{LOCATION_CHARACTER_LIMIT} characters
+                  </p>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm text-muted-foreground font-medium">Skills</label>
+                  <label className="text-sm text-muted-foreground font-medium"> Top 5 Skills</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -159,23 +175,28 @@ export default function EditProfileCard({ isOpen, initialData, onClose, onSubmit
                       value={skillInput}
                       onChange={(e) => setSkillInput(e.target.value)}
                       onKeyDown={handleSkillKeyDown}
+                      disabled={skills.length >= SKILL_LIMIT}
                       className="flex-1 h-12 bg-input border border-border rounded-xl px-4 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
                     />
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={addSkill}
-                      className="w-12 h-12 bg-primary text-primary-foreground rounded-xl flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
+                      disabled={skills.length >= SKILL_LIMIT}
+                      className="w-12 h-12 bg-primary text-primary-foreground rounded-xl flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Plus size={20} />
                     </motion.button>
                   </div>
+                  <p className="text-right text-xs text-muted-foreground">
+                    {skills.length}/{SKILL_LIMIT} skills
+                  </p>
                   {skills.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {skills.map((skill) => (
                         <span
                           key={skill}
-                          className="flex items-center gap-1 px-3 rounded-full bg-shade-background text-foreground text-sm"
+                          className="flex items-center gap-1 px-3 py-1 rounded-full bg-shade-background text-foreground text-sm"
                         >
                           {skill}
                           <button

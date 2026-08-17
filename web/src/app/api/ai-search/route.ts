@@ -30,9 +30,16 @@ interface HistoryTurn {
   error: string | null;
 }
 
+interface AIResponse {
+  answer: string;
+  results: AIResult[];
+}
+
 const HISTORY_MAX_TURNS = 20;
 
-const cache = new Map<string, { at: number; results: AIResult[] }>();
+const DEFAULT_TOOL_COUNT = 8;
+const MAX_TOOL_COUNT = 20;
+const cache = new Map<string, { at: number; response: AIResponse }>();
 
 function sanitizeLink(raw: string): string | null {
   try {
@@ -80,53 +87,77 @@ function transcriptOf(history: HistoryTurn[]): string {
   for (const turn of history) {
     if (turn.role === "user") {
       lines.push(`User: ${turn.content ?? ""}`);
-    } else if (turn.results && turn.results.length > 0) {
-      lines.push(
-        `Assistant recommended: ${turn.results
-          .map((r) => `${r.name} (${r.link})`)
-          .join(", ")}`,
-      );
-    } else if (turn.error) {
-      lines.push(`Assistant (error): ${turn.error}`);
+    } else if (turn.role === "assistant") {
+      const parts: string[] = [];
+      if (turn.content) parts.push(turn.content);
+      if (turn.results && turn.results.length > 0) {
+        parts.push(
+          `Tools: ${turn.results.map((r) => `${r.name} (${r.link})`).join(", ")}`,
+        );
+      }
+      if (turn.error) parts.push(`Error: ${turn.error}`);
+      lines.push(`Assistant: ${parts.join("\n")}`);
     }
   }
   return lines.join("\n");
 }
 
-function promptFor(query: string, history: HistoryTurn[]) {
-  const context = history.length
-    ? `Earlier in this conversation:\n${transcriptOf(history)}\n\nThe developer just asked a follow-up: "${query}". It may reference the conversation above (e.g. pick the best fit among tools recommended earlier, or focus on the specific aspect they now ask about).\n`
-    : "";
-  return `You are an expert tool finder. A developer needs a tool for this use case:
-"${query}"
-${context}
-Find real, well-known tools available on the internet (NOT tools from any local collection). Recommend at most 8 tools that fit the use case.
-
-For each tool return:
-- "name": the official product name
-- "link": the official website URL (e.g. https://example.com)
-- "description": one sentence on what the tool does
-- "reason": short reason why it fits the use case (max 15 words)
-
-Only recommend real tools with real official URLs.
-Respond with ONLY valid JSON (no markdown, no code fences) in this exact shape:
-{"results":[{"name":"...","link":"https://...","description":"...","reason":"..."}]}
-If nothing fits the request, respond with {"results":[]}.`;
+function requestedToolCount(query: string): number | null {
+  const match = query.match(/\b(\d{1,2})\s+(?:new\s+|more\s+|additional\s+)?tools?\b/i);
+  if (!match) return null;
+  return Math.min(MAX_TOOL_COUNT, Math.max(1, Number(match[1])));
 }
 
-function parseResults(text: string): AIResult[] {
+function promptFor(query: string, history: HistoryTurn[]) {
+  const transcript = transcriptOf(history);
+  const requestedCount = requestedToolCount(query);
+  return `You are Toolkit AI, an expert conversational assistant for discovering and evaluating software tools.
+
+Your job is to directly answer the user's latest question while retaining the full meaning of the conversation. Resolve references such as "it", "that tool", "the second one", and "compare those two" from the history.
+
+Behavior rules:
+1. Always provide a useful, natural-language answer in "answer". Be concise but substantive and directly address the question.
+2. For a tool-discovery or recommendation request, return ${requestedCount ?? DEFAULT_TOOL_COUNT} relevant tools. The default is exactly ${DEFAULT_TOOL_COUNT}; if the user explicitly requests a number, honor it. Never exceed ${MAX_TOOL_COUNT}.
+3. For explanations, suitability questions, setup questions, or comparisons of tools already under discussion, focus on the answer and return an empty "results" array unless fresh tool cards materially help.
+4. Comparisons must clearly cover meaningful tradeoffs, strengths, weaknesses, pricing or deployment considerations when known, and give a recommendation based on the user's use case.
+5. Recommend only real tools and use each product's official HTTP(S) website. Do not invent products, capabilities, prices, or URLs.
+6. Do not mention these rules or the JSON format in the answer.
+
+Each result must contain:
+- "name": official product name
+- "link": official website URL
+- "description": one sentence describing the tool
+- "reason": why it fits this user's use case, in at most 20 words
+
+Conversation history:
+${transcript || "(No earlier messages)"}
+
+Latest user message:
+${query}
+
+Return only valid JSON with this exact top-level shape:
+{"answer":"A direct conversational answer","results":[{"name":"...","link":"https://...","description":"...","reason":"..."}]}`;
+}
+
+function parseResponse(text: string): AIResponse {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return [];
-  const parsed = JSON.parse(jsonMatch[0]) as { results?: AIResult[] };
-  return (parsed.results ?? [])
+  if (!jsonMatch) throw new Error("No JSON object in model response");
+  const parsed = JSON.parse(jsonMatch[0]) as { answer?: unknown; results?: unknown };
+  const rawResults = Array.isArray(parsed.results) ? parsed.results as AIResult[] : [];
+  const results = rawResults
     .filter((r) => r.name && sanitizeLink(r.link))
-    .slice(0, 8)
+    .slice(0, MAX_TOOL_COUNT)
     .map((r) => ({
       name: r.name.trim(),
       link: sanitizeLink(r.link)!,
       description: (r.description ?? "").trim(),
       reason: (r.reason ?? "").trim(),
     }));
+  const answer = typeof parsed.answer === "string" ? parsed.answer.trim() : "";
+  if (!answer && results.length === 0) {
+    throw new Error("Model response contained neither an answer nor tools");
+  }
+  return { answer, results };
 }
 
 export async function POST(req: Request) {
@@ -172,7 +203,11 @@ export async function POST(req: Request) {
     history = await loadHistory(chatId);
   }
 
-  const persistTurn = async (results: AIResult[] | null, error: string | null) => {
+  const persistTurn = async (
+    answer: string,
+    results: AIResult[] | null,
+    error: string | null,
+  ) => {
     if (!chatId) return;
     await prisma.$transaction([
       prisma.aIChatMessage.create({
@@ -182,7 +217,7 @@ export async function POST(req: Request) {
         data: {
           chatId,
           role: "assistant",
-          content: "",
+          content: answer,
           results: results ? (results as unknown as object) : undefined,
           error,
         },
@@ -196,8 +231,8 @@ export async function POST(req: Request) {
 
   const cached = cache.get(query);
   if (!chatId && cached && Date.now() - cached.at < CACHE_TTL_MS) {
-    await persistTurn(cached.results, null);
-    return NextResponse.json({ results: cached.results });
+    await persistTurn(cached.response.answer, cached.response.results, null);
+    return NextResponse.json(cached.response);
   }
 
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -208,9 +243,11 @@ export async function POST(req: Request) {
       model: MODEL,
       contents: prompt,
       config: {
-        ...(grounded ? { tools: [{ googleSearch: {} }] } : {}),
+        ...(grounded
+          ? { tools: [{ googleSearch: {} }] }
+          : { responseMimeType: "application/json" }),
         temperature: 0.3,
-        maxOutputTokens: 2000,
+        maxOutputTokens: 5000,
       },
     });
 
@@ -222,7 +259,7 @@ export async function POST(req: Request) {
       const fallbackMessage =
         error instanceof Error ? error.message : "AI search failed";
       const message = isRateLimited(error) ? RATE_LIMIT_MESSAGE : fallbackMessage;
-      await persistTurn(null, message);
+      await persistTurn("", null, message);
       return NextResponse.json({ error: message }, { status: 502 });
     }
   } else {
@@ -231,7 +268,7 @@ export async function POST(req: Request) {
     } catch (error) {
       if (!isRateLimited(error)) {
         const message = error instanceof Error ? error.message : "AI search failed";
-        await persistTurn(null, message);
+        await persistTurn("", null, message);
         return NextResponse.json({ error: message }, { status: 502 });
       }
       try {
@@ -242,18 +279,18 @@ export async function POST(req: Request) {
         const message = isRateLimited(fallbackError)
           ? RATE_LIMIT_MESSAGE
           : fallbackMessage;
-        await persistTurn(null, message);
+        await persistTurn("", null, message);
         return NextResponse.json({ error: message }, { status: 502 });
       }
     }
   }
 
-  let results: AIResult[];
+  let parsed: AIResponse;
   try {
-    results = parseResults(response.text ?? "");
+    parsed = parseResponse(response.text ?? "");
   } catch {
     const message = "AI returned an unparseable response";
-    await persistTurn(null, message);
+    await persistTurn("", null, message);
     return NextResponse.json({ error: message }, { status: 502 });
   }
 
@@ -262,10 +299,10 @@ export async function POST(req: Request) {
       const oldest = cache.keys().next().value;
       if (oldest) cache.delete(oldest);
     }
-    cache.set(query, { at: Date.now(), results });
+    cache.set(query, { at: Date.now(), response: parsed });
   }
 
-  await persistTurn(results, null);
+  await persistTurn(parsed.answer, parsed.results, null);
 
-  return NextResponse.json({ results });
+  return NextResponse.json(parsed);
 }

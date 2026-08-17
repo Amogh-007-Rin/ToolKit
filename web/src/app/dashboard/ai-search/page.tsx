@@ -17,12 +17,12 @@ import {
 import { TOOL_ICONS } from "../_components/tool-icons";
 import AnimatedLogo from "../_components/AnimatedLogo";
 import OrbLoader from "@/components/ui/loaders/OrbLoader";
-import Spinner from "@/components/ui/loaders/Spinner";
 import { DotMatrix } from "@/components/assistant-ui/dot-matrix";
 import CollapsibleSidebar, {
   type ChatMeta,
 } from "../_components/CollapsibleSidebar";
 import { useCollections } from "../_components/CollectionsProvider";
+import SpikesLoader from "@/components/ui/loaders/SpikesLoader";
 
 interface AIResult {
   name: string;
@@ -255,7 +255,11 @@ export default function AISearchPage() {
       }
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", results: data.results ?? [] },
+        {
+          role: "assistant",
+          content: data.answer ?? "",
+          results: data.results ?? [],
+        },
       ]);
     } catch {
       setMessages((prev) => [
@@ -447,7 +451,7 @@ export default function AISearchPage() {
             aria-label="Send"
           >
             {loading ? (
-              <Spinner size="xs" label="Searching" />
+              <SpikesLoader className="size-5 text-current" />
             ) : (
               <ArrowUp size={18} />
             )}
@@ -517,14 +521,16 @@ function MessageBubble({
             <SearchX size={16} className="shrink-0 mt-0.5" />
             <span>{message.error}</span>
           </div>
-        ) : message.results && message.results.length > 0 ? (
+        ) : message.content || (message.results && message.results.length > 0) ? (
           <>
-            <p className="text-sm text-muted-foreground">
-              Here are {message.results.length} tool
-              {message.results.length === 1 ? "" : "s"} that fit your requirements
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-              {message.results.map((result) => {
+            {message.content && (
+              <p className="max-w-4xl whitespace-pre-wrap text-[15px] leading-7 text-foreground/90">
+                {message.content}
+              </p>
+            )}
+            {message.results && message.results.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                {message.results.map((result) => {
                 const key = `${result.name}-${result.link}`;
                 const saved = savedIn(result.name);
                 return (
@@ -581,11 +587,13 @@ function MessageBubble({
                           className="w-full h-9 px-3.5 bg-foreground text-card rounded-xl text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           {savingTo === result.name ? (
-                            <Spinner size="xs" label="Saving to collection" />
+                            <SpikesLoader className="size-5 text-current" />
                           ) : (
-                            <BookmarkPlus size={13} />
+                            <>
+                              <BookmarkPlus size={13} />
+                              Add to collection
+                            </>
                           )}
-                          Add to collection
                         </button>
                       )}
                         {openMenu === key && !saved && (
@@ -624,8 +632,9 @@ function MessageBubble({
                       </div>
                   </motion.div>
                 );
-              })}
-            </div>
+                })}
+              </div>
+            )}
           </>
         ) : (
           <p className="text-sm text-muted-foreground">

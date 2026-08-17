@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Lenis from "lenis";
 import BannerUploader from "@/components/forms/BannerUploader";
 import ProfileImageUploader from "@/components/forms/ProfileImageUploader";
 import { ArrowLeft, BriefcaseBusiness, Star } from "lucide-react";
@@ -15,6 +16,8 @@ import ProfileSkeleton from "@/components/ui/loaders/ProfileSkeleton";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -60,6 +63,30 @@ export default function ProfilePage() {
     load();
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    const wrapper = scrollRef.current;
+    const content = contentRef.current;
+    if (!wrapper || !content) return;
+
+    const lenis = new Lenis({
+      wrapper,
+      content,
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      syncTouch: true,
+      autoRaf: true,
+    });
+    const resizeObserver = new ResizeObserver(() => lenis.resize());
+    resizeObserver.observe(wrapper);
+    resizeObserver.observe(content);
+
+    return () => {
+      resizeObserver.disconnect();
+      lenis.destroy();
+    };
+  }, [loading]);
 
   const handleEditSubmit = async (data: EditableProfile) => {
     try {
@@ -112,7 +139,8 @@ export default function ProfilePage() {
   if (loading) return <ProfileSkeleton />;
 
   return (
-    <div className="min-h-screen w-full bg-background relative">
+    <div ref={scrollRef} data-lenis-wrapper className="h-dvh w-full overflow-y-auto bg-background">
+      <div ref={contentRef} className="relative min-h-full w-full">
       <button
         onClick={() => router.back()}
         className="fixed left-3 top-3 z-30 flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-border bg-card shadow-2xs transition-colors hover:bg-muted sm:left-6 sm:top-6"
@@ -150,18 +178,18 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
-          <div className="part-3 mt-4 flex items-center lg:mt-0 lg:h-[25%]">
-            <div className="profile-occupation relative flex w-full flex-col gap-3 lg:h-full lg:flex-row lg:items-center">
-              <p className="w-full max-w-xl whitespace-normal wrap-break-word text-foreground line-clamp-4 leading-5 lg:absolute lg:left-27">
+          <div className="part-3 mt-4 flex items-center lg:mt-0 lg:min-h-[10%] lg:py-2">
+            <div className="profile-occupation flex w-full flex-col gap-3 lg:min-h-full lg:flex-row lg:items-center">
+              <p className="w-full max-w-xl whitespace-normal wrap-break-word text-foreground leading-5 lg:ml-27 lg:w-[40%]">
                 {loading ? "..." : (profile.bio || "Your bio")}
               </p>
-              <p className="text-base text-muted-foreground lg:absolute lg:right-10">
+              <p className="text-base text-muted-foreground lg:ml-auto lg:mr-10">
                 {loading ? "..." : `${profile.followers} followers · ${profile.following} following`}
               </p>
             </div>
           </div>
-          <div className="part-4 mt-4 flex flex-col gap-3 lg:mt-0 lg:h-[10%] lg:flex-row lg:items-center">
-            <div className="profile-location relative flex items-center lg:h-full lg:w-[50%]">
+          <div className="part-4 mt-4 flex flex-col gap-3 lg:mt-0 lg:h-[12%] lg:flex-row lg:items-center">
+            <div className="profile-location relative flex items-start lg:h-full lg:w-[50%]">
               <p className="text-foreground lg:absolute lg:left-27">
                 {loading ? "..." : (profile.location || "Your location")}
               </p>
@@ -173,18 +201,18 @@ export default function ProfilePage() {
           </div>
           <div className="part-5 mt-3 flex w-full flex-col gap-3 lg:mt-0 lg:h-[25%] lg:flex-row lg:items-center">
             <div className="left-part relative flex items-center lg:h-full lg:w-[30%]">
-              <div className="flex h-11 w-full items-center gap-2 sm:w-75 lg:absolute lg:left-27 lg:h-full">
+              <div className="flex h-11 w-full items-start gap-2 sm:w-75 lg:absolute lg:left-27 lg:h-full">
                 <Multibutton
                   tag="edit-profile"
                   label="Edit Profile"
                   onClick={() => setIsEditing(true)}
-                  className="h-11! w-[50%] rounded-4xl lg:h-[30%]!"
+                  className="h-11! w-[50%] rounded-4xl lg:h-[50%]!"
                 />
                 <Multibutton
                   tag="share-profile"
                   label="Share Profile"
                   onClick={() => setIsSharing(true)}
-                  className="h-11! w-[50%] rounded-4xl bg-foreground text-card lg:h-[30%]!"
+                  className="h-11! w-[50%] rounded-4xl bg-foreground text-card lg:h-[50%]!"
                 />
               </div>
             </div>
@@ -213,6 +241,7 @@ export default function ProfilePage() {
         tag={profile.tag}
         onClose={() => setIsSharing(false)}
       />
+      </div>
     </div>
   );
 }

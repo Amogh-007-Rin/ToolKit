@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Lenis from "lenis";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -39,6 +40,8 @@ export default function VisiterProfile() {
   const params = useParams<{ tag: string }>();
   const router = useRouter();
   const tag = params.tag;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const [user, setUser] = useState<PublicUser | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -92,6 +95,30 @@ export default function VisiterProfile() {
     };
   }, [user]);
 
+  useEffect(() => {
+    const wrapper = scrollRef.current;
+    const content = contentRef.current;
+    if (!wrapper || !content) return;
+
+    const lenis = new Lenis({
+      wrapper,
+      content,
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      syncTouch: true,
+      autoRaf: true,
+    });
+    const resizeObserver = new ResizeObserver(() => lenis.resize());
+    resizeObserver.observe(wrapper);
+    resizeObserver.observe(content);
+
+    return () => {
+      resizeObserver.disconnect();
+      lenis.destroy();
+    };
+  }, [loading, notFound]);
+
   const toggleFollow = async () => {
     if (!user || followBusy) return;
     setFollowBusy(true);
@@ -141,7 +168,8 @@ export default function VisiterProfile() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-background relative">
+    <div ref={scrollRef} data-lenis-wrapper className="h-dvh w-full overflow-y-auto bg-background">
+      <div ref={contentRef} className="relative min-h-full w-full">
       <button
         onClick={() => router.back()}
         className="fixed left-3 top-3 z-30 flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-border bg-card shadow-2xs transition-colors hover:bg-muted sm:left-6 sm:top-6"
@@ -244,7 +272,7 @@ export default function VisiterProfile() {
                     label={user.followedByMe ? "Following" : "Follow"}
                     icon={user.followedByMe ? Check : UserPlus}
                     onClick={toggleFollow}
-                    className={`h-11! rounded-4xl lg:h-[30%]! ${
+                    className={`h-11! rounded-4xl lg:h-[60%]! ${
                       user.followedByMe ? "bg-foreground text-card" : ""
                     } w-[50%]`}
                     iconClassName={user.followedByMe ? "text-card" : "text-foreground"}
@@ -255,7 +283,7 @@ export default function VisiterProfile() {
                     label="Message"
                     icon={MessageCircle}
                     onClick={() => router.push(`/dashboard/messages?user=${user.id}`)}
-                    className="h-11! w-[50%] rounded-4xl bg-foreground text-card lg:h-[30%]!"
+                    className="h-11! w-[50%] rounded-4xl bg-foreground text-card lg:h-[60%]!"
                     iconClassName="text-card"
                     textClassName="text-card"
                   />
@@ -347,6 +375,7 @@ export default function VisiterProfile() {
           }
         />
       )}
+      </div>
     </div>
   );
 }

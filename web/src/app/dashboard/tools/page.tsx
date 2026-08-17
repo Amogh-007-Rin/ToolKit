@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Cuboid, List, Pencil, Plus, Trash2, Workflow } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import Multibutton from "../_components/buttons/Multibutton";
 import Searchbar from "../_components/Searchbar";
 import ToolCollectionCard from "../_components/cards/ToolCollectionCard";
@@ -113,11 +113,6 @@ export default function ToolsPage() {
                     <p className="text-xl text-foreground tracking-wide sm:text-2xl">My Collections</p>
                 </div>
                 <div className="right-part flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none sm:justify-end sm:pb-0">
-                    <Multibutton tag="Add-tool-btn" label="List" onClick={checkLog} icon={List} className="h-10! w-auto! shrink-0 px-3" />
-                    <Multibutton tag="Add-tool-btn" label="Board" onClick={checkLog} icon={Cuboid}
-                        className="h-10! w-auto! shrink-0 bg-foreground px-3" iconClassName="text-background" textClassName="text-background" />
-                    <Multibutton tag="Add-tool-btn" label="Add on" onClick={checkLog} icon={Workflow} className="h-10! w-auto! shrink-0 px-3"
-                    />
                     <Multibutton tag="Add-new-collection" label="collection" onClick={() => setIsCardOpen(true)} icon={Plus}
                         className="h-10! w-auto! shrink-0 bg-primary px-3" iconClassName="text-primary-foreground" textClassName="text-primary-foreground" />
                 </div>
@@ -231,8 +226,4 @@ export default function ToolsPage() {
             />
         </div>
     );
-};
-
-function checkLog() {
-    alert("button clicked")
 };

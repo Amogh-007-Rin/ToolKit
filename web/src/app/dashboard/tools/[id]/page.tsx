@@ -223,15 +223,15 @@ export default function CollectionDetailPage() {
                 </div>
             </div>
             <div ref={scrollRef} data-lenis-wrapper className="part-3 min-h-0 w-full flex-1 overflow-y-auto scrollbar-none">
-              <div ref={contentRef} className="min-h-full p-4">
+              <div ref={contentRef} className="flex min-h-full flex-col p-4">
                 {collection.tools.length === 0 ? (
-                    <div className="w-full h-full flex items-center justify-center">
-                        <p className="text-muted-foreground text-lg">
+                    <div className="flex w-full flex-1 items-center justify-center text-center">
+                        <p className="text-lg text-muted-foreground">
                             No tools yet. Click &quot;Add tools&quot; to add your first tool.
                         </p>
                     </div>
                 ) : filteredTools.length === 0 ? (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="flex w-full flex-1 items-center justify-center text-center">
                         <p className="text-muted-foreground text-lg">
                             No tools match &quot;{searchQuery.trim()}&quot;.
                         </p>

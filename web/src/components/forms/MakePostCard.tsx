@@ -3,7 +3,7 @@
 import { useState, useRef, ChangeEvent } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ImageIcon, Video, X, Check, UploadCloud, AlignLeft, Hash, AlertCircle, Sparkles } from "lucide-react";
+import { ImageIcon, Video, X, Check, UploadCloud, AlignLeft, Hash, AlertCircle } from "lucide-react";
 import { uploadFile } from "@/services/media";
 import Spinner from "@/components/ui/loaders/Spinner";
 
@@ -182,10 +182,8 @@ export default function MakePostCard({ isOpen, onClose, onPosted }: MakePostCard
               aria-label="Create new post"
               className="relative pointer-events-auto w-full max-w-2xl max-h-[92dvh] rounded-[26px] sm:rounded-[30px] bg-card/95 border border-white/12 shadow-[0_40px_120px_-24px_rgba(0,0,0,0.8)] ring-1 ring-black/10 flex flex-col overflow-hidden"
             >
-              <div className="absolute -top-24 left-1/3 h-48 w-72 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
               <div className="relative w-full min-h-18 flex items-center justify-between px-5 sm:px-6 py-4 border-b border-border/60 bg-card/75 backdrop-blur-2xl shrink-0">
                 <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/12 text-primary shadow-[inset_0_0_0_1px_rgba(157,111,254,0.15)]"><Sparkles size={18} /></span>
                   <div><p className="text-lg text-foreground font-semibold tracking-tight">Create new post</p><p className="text-xs text-muted-foreground">Share something worth discovering</p></div>
                 </div>
                 <motion.button
@@ -297,7 +295,7 @@ export default function MakePostCard({ isOpen, onClose, onPosted }: MakePostCard
                   whileTap={{ scale: 0.98 }}
                   onClick={submit}
                   disabled={media.length === 0 || submitting || uploadInProgress}
-                  className="w-full h-12 bg-linear-to-r from-primary to-[#b28aff] text-primary-foreground rounded-2xl font-semibold text-sm shadow-[0_12px_32px_-12px_rgba(157,111,254,0.85)] hover:brightness-105 disabled:opacity-45 disabled:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full h-12 bg-primary text-primary-foreground rounded-2xl font-semibold text-sm hover:brightness-105 disabled:opacity-45 disabled:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   {submitting || uploadInProgress ? <Spinner size="xs" label={submitting ? "Sharing post" : "Uploading media"} /> : <Check size={18} />}
                   {submitting ? "Sharing..." : uploadInProgress ? "Uploading..." : "Share"}

@@ -23,7 +23,7 @@ export default function ToolSearchbar({ value, onChange, sortValue, onSortChange
 
     return (
         <div className="searchbar flex h-12 w-full min-w-0 rounded-2xl bg-card">
-            <motion.div className="part-1 flex h-full w-10 shrink-0 items-center justify-center rounded-l-2xl"
+            <motion.div className="part-1 flex h-full w-12 shrink-0 items-center justify-center rounded-l-2xl"
                 whileHover="hover">
                 <motion.div className="w-full h-full flex items-center justify-center rounded-l-2xl" variants={{
                     hover: {

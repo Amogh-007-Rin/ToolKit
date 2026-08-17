@@ -395,7 +395,7 @@ export default function AISearchPage() {
               {loading && (
                 <div className="flex items-start py-4">
                   <div className="flex items-center justify-center h-14 w-14 px-4 rounded-2xl">
-                    <DotMatrix state="loading" className="size-10"/>
+                    <DotMatrix state="loading" className="size-8"/>
                   </div>
                 </div>
               )}
@@ -418,7 +418,7 @@ export default function AISearchPage() {
       </div>
 
       <div className="flex w-full shrink-0 justify-center px-2 pb-2 pt-2 sm:px-6 sm:pb-6">
-        <div className="flex w-full max-w-250 items-end gap-2 rounded-[24px] border border-border bg-card px-3 py-2.5 shadow-sm transition-all focus-within:border-theme-button-insider/20 focus-within:shadow-md sm:rounded-[28px] sm:px-5">
+        <div className="flex w-full max-w-250 items-end gap-2 rounded-3xl border border-border bg-card px-3 py-2.5 shadow-sm transition-all focus-within:border-theme-button-insider/20 focus-within:shadow-md sm:rounded-[28px] sm:px-5">
           <div className="self-center flex">
             <OrbLoader size={32} drag={false} cursorOn={false} animated={isTyping} />
           </div>

@@ -25,6 +25,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ tag: st
       skills: true,
       followers: true,
       following: true,
+      collections: {
+        where: { showcased: true },
+        include: { tools: true },
+        orderBy: { updatedAt: "desc" },
+      },
     },
   });
 

@@ -3,19 +3,20 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, Bookmark, Star, Plus, Play } from "lucide-react";
+import { LayoutGrid, Bookmark, Folder, Plus, Play, X } from "lucide-react";
 import MakePostCard from "@/components/forms/MakePostCard";
 import EditPostCard from "@/components/forms/EditPostCard";
 import PostDetailCard from "@/components/ui/PostDetailCard";
 import ConfirmDeleteCard from "@/app/dashboard/_components/cards/ConfirmDeleteCard";
 import type { Post } from "@/types/posts";
+import type { Collection } from "@/types/collections";
 
-type Tab = "posts" | "saved" | "tagged";
+type Tab = "posts" | "saved" | "collections";
 
 const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "posts", label: "Posts", icon: LayoutGrid },
   { id: "saved", label: "Saved", icon: Bookmark },
-  { id: "tagged", label: "tagged", icon: Star },
+  { id: "collections", label: "Collections", icon: Folder },
 ];
 
 export default function PostNavigationBar() {
@@ -26,6 +27,10 @@ export default function PostNavigationBar() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [isChoosingCollections, setIsChoosingCollections] = useState(false);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const [savingShowcase, setSavingShowcase] = useState(false);
 
   const loadPosts = useCallback(async () => {
     try {
@@ -59,8 +64,39 @@ export default function PostNavigationBar() {
         if (data) setPosts(data.posts ?? []);
       })
       .catch(() => {});
+    fetch("/api/collections", { signal: controller.signal })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!data) return;
+        const list = (data.collections ?? []) as Collection[];
+        setCollections(list);
+        setSelectedCollectionIds(list.filter((collection) => collection.showcased).map((collection) => collection.id));
+      })
+      .catch(() => {});
     return () => controller.abort();
   }, []);
+
+  const saveShowcase = async () => {
+    if (savingShowcase) return;
+    setSavingShowcase(true);
+    try {
+      const res = await fetch("/api/collections/showcase", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collectionIds: selectedCollectionIds }),
+      });
+      if (!res.ok) return;
+      setCollections((current) =>
+        current.map((collection) => ({
+          ...collection,
+          showcased: selectedCollectionIds.includes(collection.id),
+        })),
+      );
+      setIsChoosingCollections(false);
+    } finally {
+      setSavingShowcase(false);
+    }
+  };
 
   const deletePost = async () => {
     if (!selectedPost) return;
@@ -225,23 +261,46 @@ export default function PostNavigationBar() {
                 </div>
               )
             )}
-            {activeTab === "tagged" && (
-              <div className="w-full flex flex-col items-center justify-center gap-4 py-16">
-                <div className="w-16 h-16 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center">
-                  <Star size={24} className="text-muted-foreground" />
+            {activeTab === "collections" && (
+              collections.some((collection) => collection.showcased) ? (
+                <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {collections.filter((collection) => collection.showcased).map((collection) => (
+                    <div key={collection.id} className="flex min-h-48 flex-col rounded-3xl border border-border bg-card p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="truncate text-lg font-semibold text-foreground">{collection.title}</h3>
+                        <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+                          {collection.tools.length} {collection.tools.length === 1 ? "tool" : "tools"}
+                        </span>
+                      </div>
+                      <p className="mt-3 line-clamp-3 text-sm leading-5 text-muted-foreground">
+                        {collection.description || "No description"}
+                      </p>
+                      <div className="mt-auto flex flex-wrap gap-1.5 pt-5">
+                        {collection.tools.slice(0, 5).map((tool) => (
+                          <span key={tool.id} className="max-w-full truncate rounded-lg border border-border px-2 py-1 text-xs text-foreground/80">
+                            {tool.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  No tagged posts yet
-                </p>
-              </div>
+              ) : (
+                <div className="flex w-full flex-col items-center justify-center gap-4 py-16">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/40">
+                    <Folder size={24} className="text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Choose collections to showcase on your public profile</p>
+                </div>
+              )
             )}
           </motion.div>
         </AnimatePresence>
 
         {activeTab !== "saved" && (
           <motion.button
-            onClick={() => setIsMakingPost(true)}
-            title="Make a Post"
+            onClick={() => activeTab === "collections" ? setIsChoosingCollections(true) : setIsMakingPost(true)}
+            title={activeTab === "collections" ? "Choose collections" : "Make a Post"}
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 18 }}
@@ -312,6 +371,71 @@ export default function PostNavigationBar() {
         onCancel={() => setIsConfirmingDelete(false)}
         onConfirm={deletePost}
       />
+
+      <AnimatePresence>
+        {isChoosingCollections && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close collection picker"
+              className="fixed inset-0 z-40 bg-black/60"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsChoosingCollections(false)}
+            />
+            <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.94, y: 16 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.94, y: 16 }}
+                className="pointer-events-auto flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl"
+              >
+                <div className="flex items-center justify-between border-b border-border p-5">
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">Showcase collections</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">Select what visitors can see and import.</p>
+                  </div>
+                  <button onClick={() => setIsChoosingCollections(false)} className="cursor-pointer text-muted-foreground hover:text-foreground">
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="thin-scrollbar flex-1 space-y-2 overflow-y-auto p-4">
+                  {collections.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-muted-foreground">Create a collection in Tools first.</p>
+                  ) : collections.map((collection) => {
+                    const selected = selectedCollectionIds.includes(collection.id);
+                    return (
+                      <button
+                        key={collection.id}
+                        onClick={() => setSelectedCollectionIds((current) => selected ? current.filter((id) => id !== collection.id) : [...current, collection.id])}
+                        className={`flex w-full cursor-pointer items-center justify-between rounded-2xl border p-4 text-left transition-colors ${selected ? "border-primary bg-primary/8" : "border-border hover:bg-muted/50"}`}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">{collection.title}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{collection.tools.length} {collection.tools.length === 1 ? "tool" : "tools"}</p>
+                        </div>
+                        <span className={`flex h-5 w-5 items-center justify-center rounded-md border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
+                          {selected && <span className="text-xs">✓</span>}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-border p-4">
+                  <button
+                    onClick={saveShowcase}
+                    disabled={savingShowcase}
+                    className="flex h-11 w-full cursor-pointer items-center justify-center rounded-xl bg-primary text-sm font-medium text-primary-foreground disabled:opacity-50"
+                  >
+                    {savingShowcase ? "Saving…" : "Save showcase"}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

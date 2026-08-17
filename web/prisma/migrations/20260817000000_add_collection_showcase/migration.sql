@@ -1,0 +1,1 @@
+ALTER TABLE "Collection" ADD COLUMN "showcased" BOOLEAN NOT NULL DEFAULT false;

@@ -45,10 +45,13 @@ model Collection {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tools       Tool[]
+  showcased  Boolean  @default(false)
+  importedFromId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
+  @@unique([userId, importedFromId])
 }
 
 model Tool {

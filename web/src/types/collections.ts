@@ -15,6 +15,8 @@ export interface Collection {
     title: string;
     description: string;
     tools: Tool[];
+    showcased?: boolean;
+    importedFromId?: string | null;
     createdAt?: string;
     updatedAt?: string;
 }

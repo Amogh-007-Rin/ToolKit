@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   BriefcaseBusiness,
@@ -13,12 +14,28 @@ import {
   MessageCircle,
   UserRound,
   Play,
+  Folder,
+  LayoutGrid,
+  Download,
+  X,
+  CheckCircle2,
 } from "lucide-react";
 import ProfileSkeleton from "@/components/ui/loaders/ProfileSkeleton";
 import Multibutton from "@/app/dashboard/_components/buttons/Multibutton";
 import SkillTag from "@/components/ui/tags/SkillTag";
 import PostDetailCard from "@/components/ui/PostDetailCard";
 import type { Post } from "@/types/posts";
+import type { Collection, Tool } from "@/types/collections";
+import { TOOL_ICONS } from "@/app/dashboard/_components/tool-icons";
+
+function faviconUrl(link: string | null): string | null {
+  if (!link) return null;
+  try {
+    return `https://www.google.com/s2/favicons?domain=${new URL(link).hostname}&sz=64`;
+  } catch {
+    return null;
+  }
+}
 
 interface PublicUser {
   id: string;
@@ -34,6 +51,7 @@ interface PublicUser {
   following: number;
   followedByMe: boolean;
   isMe: boolean;
+  collections: Collection[];
 }
 
 export default function VisiterProfile() {
@@ -49,6 +67,19 @@ export default function VisiterProfile() {
   const [followBusy, setFollowBusy] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [activeTab, setActiveTab] = useState<"collections" | "posts">("collections");
+  const [myCollections, setMyCollections] = useState<Collection[]>([]);
+  const [importing, setImporting] = useState<string | null>(null);
+  const [toolToImport, setToolToImport] = useState<{ collection: Collection; tool: Tool } | null>(null);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [expandedCollection, setExpandedCollection] = useState<Collection | null>(null);
+
+  useEffect(() => {
+    if (!importSuccess) return;
+    const timer = window.setTimeout(() => setImportSuccess(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [importSuccess]);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,6 +125,67 @@ export default function VisiterProfile() {
       cancelled = true;
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!user || user.isMe) return;
+    fetch("/api/collections")
+      .then((res) => res.ok ? res.json() : { collections: [] })
+      .then((data) => setMyCollections(data.collections ?? []))
+      .catch(() => {});
+  }, [user]);
+
+  const importCollection = async (collection: Collection) => {
+    if (importing || myCollections.some((item) => item.importedFromId === collection.id)) return;
+    setImporting(collection.id);
+    setImportNotice(null);
+    try {
+      const res = await fetch("/api/collections/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collectionId: collection.id }),
+      });
+      if (!res.ok) throw new Error("Import failed");
+      const data = await res.json();
+      setMyCollections((current) => [data.collection, ...current]);
+      setImportSuccess(`“${collection.title}” was added to your collections`);
+    } catch {
+      setImportNotice("Could not import this collection. Please try again.");
+    } finally {
+      setImporting(null);
+    }
+  };
+
+  const collectionImported = (collectionId: string) =>
+    myCollections.some((collection) => collection.importedFromId === collectionId);
+
+  const importTool = async (destinationCollectionId: string) => {
+    if (!toolToImport || importing) return;
+    const { collection, tool } = toolToImport;
+    setImporting(tool.id);
+    setImportNotice(null);
+    try {
+      const res = await fetch("/api/collections/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          collectionId: collection.id,
+          toolId: tool.id,
+          destinationCollectionId,
+        }),
+      });
+      if (!res.ok) throw new Error("Import failed");
+      const data = await res.json();
+      setMyCollections((current) => current.map((item) =>
+        item.id === destinationCollectionId ? { ...item, tools: [...item.tools, data.tool] } : item
+      ));
+      setImportSuccess(`“${tool.name}” was added to your collection`);
+      setToolToImport(null);
+    } catch {
+      setImportNotice("Could not import this tool. Please try again.");
+    } finally {
+      setImporting(null);
+    }
+  };
 
   useEffect(() => {
     const wrapper = scrollRef.current;
@@ -191,7 +283,7 @@ export default function VisiterProfile() {
           ) : null}
         </div>
 
-        <div className="profile-info relative w-full px-4 pb-5 pt-18 sm:px-8 sm:pt-24 lg:h-[35vh] lg:px-0 lg:pb-0 lg:pt-0">
+        <div className="profile-info relative w-full px-4 pb-5 pt-18 sm:px-8 sm:pt-24 lg:h-[35vh] lg:min-h-80 lg:px-0 lg:pb-0 lg:pt-0">
           <div className="absolute -top-14 left-4 z-10 flex h-28 w-28 flex-col items-center justify-center rounded-full sm:-top-20 sm:left-24 sm:h-40 sm:w-40">
             <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-background bg-shade-background">
               {user.image ? (
@@ -212,7 +304,7 @@ export default function VisiterProfile() {
             </div>
           </div>
 
-          <div className="part-1 flex w-full flex-col items-start gap-2 sm:items-end lg:h-[30%] lg:justify-center lg:px-10">
+          <div className="part-1 flex w-full flex-col items-start gap-2 sm:items-end lg:h-[20%] lg:justify-center lg:px-10">
             <div className="flex items-center gap-2 px-1.5">
               <p className="text-foreground">Current Role</p>
               <BriefcaseBusiness size={18} className="text-foreground" />
@@ -222,7 +314,7 @@ export default function VisiterProfile() {
             </span>
           </div>
 
-          <div className="part-2 mt-5 flex items-center lg:mt-0 lg:h-[27%]">
+          <div className="part-2 mt-5 flex items-center lg:mt-0 lg:h-[20%]">
             <div className="profile-name relative flex w-full flex-col lg:h-full lg:justify-center">
               <p className="text-2xl font-bold text-foreground lg:absolute lg:left-27 lg:top-4">
                 {user.name || "Unnamed User"}
@@ -233,18 +325,18 @@ export default function VisiterProfile() {
             </div>
           </div>
 
-          <div className="part-3 mt-4 flex items-center lg:mt-0 lg:h-[10%]">
-            <div className="profile-occupation relative flex w-full flex-col gap-3 lg:h-full lg:flex-row lg:items-center">
-              <p className="line-clamp-4 max-w-xl wrap-break-word text-foreground lg:absolute lg:left-27">
+          <div className="part-3 mt-4 flex items-center lg:mt-0 lg:min-h-[10%] lg:py-2">
+            <div className="profile-occupation flex w-full flex-col gap-3 lg:min-h-full lg:flex-row lg:items-center">
+              <p className="w-full max-w-xl whitespace-normal wrap-break-word text-foreground leading-5 lg:ml-27 lg:w-[40%]">
                 {user.bio || "No bio yet"}
               </p>
-              <p className="text-base text-muted-foreground lg:absolute lg:right-10">
+              <p className="text-base text-muted-foreground lg:ml-auto lg:mr-10 lg:shrink-0">
                 {user.followers} followers · {user.following} following
               </p>
             </div>
           </div>
 
-          <div className="part-4 mt-4 flex flex-col gap-3 lg:mt-0 lg:h-[10%] lg:flex-row lg:items-center">
+          <div className="part-4 mt-4 flex flex-col gap-3 lg:mt-0 lg:h-[12%] lg:flex-row lg:items-center">
             <div className="profile-location relative flex items-center lg:h-full lg:w-[50%]">
               <p className="text-foreground lg:absolute lg:left-27">
                 {user.location || "No location"}
@@ -256,7 +348,7 @@ export default function VisiterProfile() {
             </div>
           </div>
 
-          <div className="part-5 mt-3 flex w-full flex-col gap-3 lg:mt-0 lg:h-[28%] lg:flex-row lg:items-center">
+          <div className="part-5 mt-3 flex w-full flex-col gap-3 lg:mt-0 lg:h-[25%] lg:flex-row lg:items-center">
             <div className="left-part relative flex items-center lg:h-full lg:w-[30%]">
               {user.isMe ? (
                 <button
@@ -299,7 +391,103 @@ export default function VisiterProfile() {
         </div>
 
         <div className="part-3-post-navigator w-full py-4">
-          {posts.length > 0 ? (
+          <div className="mb-4 flex h-16 w-full border-b border-border">
+            {([
+              { id: "collections" as const, label: "Collections", icon: Folder },
+              { id: "posts" as const, label: "Posts", icon: LayoutGrid },
+            ]).map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`relative flex flex-1 cursor-pointer items-center justify-center gap-2 text-sm font-medium transition-colors ${activeTab === id ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <motion.span
+                  key={activeTab === id ? "active" : "inactive"}
+                  initial={activeTab === id ? { scale: 0.65, rotate: -12 } : false}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 450, damping: 16 }}
+                >
+                  <Icon size={18} fill={activeTab === id ? "currentColor" : "none"} />
+                </motion.span>
+                {label}
+                {activeTab === id && (
+                  <motion.span
+                    layoutId="visitor-profile-tab-indicator"
+                    className="absolute bottom-0 h-0.5 w-24 rounded-full bg-foreground"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {importNotice && (
+            <div className="mx-4 mb-4 rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground">
+              {importNotice}
+            </div>
+          )}
+
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+          {activeTab === "collections" ? (
+            user.collections.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {user.collections.map((collection) => (
+                  <motion.button
+                    key={collection.id}
+                    layoutId={`visitor-collection-${collection.id}`}
+                    onClick={() => setExpandedCollection(collection)}
+                    className="group relative flex min-h-56 cursor-pointer flex-col gap-3 overflow-hidden rounded-3xl border border-border/80 bg-linear-to-br from-card via-card to-primary/6 p-5 text-left transition-colors hover:border-primary/40"
+                    whileHover={{ y: -4 }}
+                  >
+                    <div className="pointer-events-none absolute -right-12 -top-16 h-36 w-36 rounded-full bg-primary/10 blur-3xl transition-opacity group-hover:opacity-80" />
+                    <div className="relative flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-lg font-semibold text-foreground">{collection.title}</h3>
+                        <span className="mt-1 inline-flex rounded-full border border-border/70 bg-background/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                          {collection.tools.length} {collection.tools.length === 1 ? "tool" : "tools"}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="relative line-clamp-3 text-sm leading-5 text-muted-foreground">{collection.description || "No description"}</p>
+                    {collection.tools.length > 0 && (
+                      <div className="relative mt-auto flex items-center border-t border-border/70 pt-4">
+                        <div className="flex items-center">
+                          {collection.tools.slice(0, 8).map((tool) => {
+                            const Icon = TOOL_ICONS[tool.icon] ?? TOOL_ICONS.sparkles;
+                            const logoUrl = tool.logoUrl ?? faviconUrl(tool.link);
+                            return logoUrl ? (
+                              <span key={tool.id} className="relative -ml-2 h-8 w-8 first:ml-0 overflow-hidden rounded-full border-2 border-card bg-shade-background" title={tool.name}>
+                                <Image src={logoUrl} fill sizes="32px" alt={tool.name} unoptimized className="object-contain" />
+                              </span>
+                            ) : (
+                              <span key={tool.id} className="-ml-2 flex h-8 w-8 first:ml-0 items-center justify-center rounded-full border-2 border-card bg-shade-background" title={tool.name}>
+                                <Icon size={15} className="text-muted-foreground" />
+                              </span>
+                            );
+                          })}
+                        </div>
+                        {collection.tools.length > 8 && <span className="ml-2 text-xs font-medium text-muted-foreground">+{collection.tools.length - 8} more</span>}
+                      </div>
+                    )}
+                  </motion.button>
+                ))}
+              </div>
+            ) : (
+              <div className="flex w-full flex-col items-center justify-center gap-4 py-16">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/40">
+                  <Folder size={24} className="text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No showcased collections yet</p>
+              </div>
+            )
+          ) : posts.length > 0 ? (
             <div className="grid w-full grid-cols-3 gap-1 p-1 sm:grid-cols-4 lg:grid-cols-5">
               {posts.map((post, index) => {
                 const first = post.media[0];
@@ -343,8 +531,142 @@ export default function VisiterProfile() {
               <p className="text-sm text-muted-foreground">No posts yet</p>
             </div>
           )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
+
+      <AnimatePresence>
+        {expandedCollection && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close expanded collection"
+              className="fixed inset-0 z-40 bg-black/65 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setExpandedCollection(null)}
+            />
+            <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
+              <motion.div
+                layoutId={`visitor-collection-${expandedCollection.id}`}
+                className="pointer-events-auto relative flex h-[70%] w-[70%] min-w-0 flex-col overflow-hidden rounded-3xl border border-border bg-linear-to-br from-card via-card to-primary/6 shadow-2xl max-sm:h-[85%] max-sm:w-[94%]"
+              >
+                <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-primary/12 blur-3xl" />
+                <div className="relative flex shrink-0 items-start justify-between gap-4 border-b border-border p-5 sm:p-7">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="truncate text-xl font-semibold text-foreground sm:text-2xl">{expandedCollection.title}</h2>
+                      <span className="rounded-full border border-border bg-background/50 px-2.5 py-1 text-xs text-muted-foreground">
+                        {expandedCollection.tools.length} {expandedCollection.tools.length === 1 ? "tool" : "tools"}
+                      </span>
+                    </div>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{expandedCollection.description || "No description"}</p>
+                  </div>
+                  <button
+                    onClick={() => setExpandedCollection(null)}
+                    className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    aria-label="Close collection"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div
+                  data-lenis-prevent
+                  className="thin-scrollbar relative min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain p-4 sm:p-6"
+                >
+                  {expandedCollection.tools.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+                      {expandedCollection.tools.map((tool) => {
+                        const Icon = TOOL_ICONS[tool.icon] ?? TOOL_ICONS.sparkles;
+                        const logoUrl = tool.logoUrl ?? faviconUrl(tool.link);
+                        return (
+                          <div key={tool.id} className="flex min-h-32 flex-col rounded-2xl border border-border/80 bg-card/80 p-4">
+                            <div className="flex items-start gap-3">
+                              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-shade-background">
+                                {logoUrl ? (
+                                  <Image src={logoUrl} fill sizes="40px" alt={tool.name} unoptimized className="object-contain" />
+                                ) : (
+                                  <Icon size={18} className="text-muted-foreground" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-semibold text-foreground">{tool.name}</p>
+                                {tool.link && (
+                                  <a href={tool.link} target="_blank" rel="noopener noreferrer" className="block truncate text-xs text-primary hover:underline">
+                                    {tool.link}
+                                  </a>
+                                )}
+                              </div>
+                              {!user.isMe && (
+                                <button
+                                  onClick={() => setToolToImport({ collection: expandedCollection, tool })}
+                                  title={`Import ${tool.name}`}
+                                  className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                                >
+                                  <Download size={15} />
+                                </button>
+                              )}
+                            </div>
+                            {tool.description && <p className="mt-3 line-clamp-2 text-xs leading-5 text-muted-foreground">{tool.description}</p>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">This collection has no tools yet.</div>
+                  )}
+                </div>
+
+                {!user.isMe && (
+                  <div className="relative shrink-0 border-t border-border bg-card/70 p-4 sm:px-6">
+                    <button
+                      onClick={() => importCollection(expandedCollection)}
+                      disabled={importing !== null || collectionImported(expandedCollection.id)}
+                      className="ml-auto flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-foreground px-5 text-sm font-medium text-card disabled:opacity-50"
+                    >
+                      {collectionImported(expandedCollection.id) ? <Check size={16} /> : <Download size={16} />}
+                      {collectionImported(expandedCollection.id)
+                        ? "Collection imported"
+                        : importing === expandedCollection.id
+                          ? "Importing…"
+                          : "Import entire collection"}
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {importSuccess && (
+          <motion.div
+            role="status"
+            initial={{ opacity: 0, y: -24, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.94 }}
+            transition={{ type: "spring", stiffness: 420, damping: 28 }}
+            className="fixed left-1/2 top-6 z-70 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-border bg-card px-5 py-3.5 shadow-2xl"
+          >
+            <motion.span
+              initial={{ scale: 0, rotate: -90 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ delay: 0.08, type: "spring", stiffness: 520, damping: 20 }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+            >
+              <CheckCircle2 size={20} strokeWidth={2.5} />
+            </motion.span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">Import complete</p>
+              <p className="max-w-72 truncate text-xs text-muted-foreground">{importSuccess}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {selectedPost && (
         <PostDetailCard
@@ -374,6 +696,45 @@ export default function VisiterProfile() {
             setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: count } : p)))
           }
         />
+      )}
+      {toolToImport && (
+        <>
+          <button
+            type="button"
+            aria-label="Close import dialog"
+            onClick={() => setToolToImport(null)}
+            className="fixed inset-0 z-40 bg-black/60"
+          />
+          <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="pointer-events-auto flex max-h-[75vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
+              <div className="flex items-center justify-between border-b border-border p-5">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Import {toolToImport.tool.name}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">Choose one of your collections.</p>
+                </div>
+                <button onClick={() => setToolToImport(null)} className="cursor-pointer text-muted-foreground hover:text-foreground"><X size={20} /></button>
+              </div>
+              <div className="thin-scrollbar flex-1 space-y-2 overflow-y-auto p-4">
+                {myCollections.length > 0 ? myCollections.map((collection) => (
+                  <button
+                    key={collection.id}
+                    onClick={() => importTool(collection.id)}
+                    disabled={importing !== null}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-border p-4 text-left hover:bg-muted/50 disabled:opacity-50"
+                  >
+                    <span className="truncate font-medium text-foreground">{collection.title}</span>
+                    <span className="text-xs text-muted-foreground">{collection.tools.length} tools</span>
+                  </button>
+                )) : (
+                  <div className="py-8 text-center">
+                    <p className="text-sm text-muted-foreground">You need a collection before importing a tool.</p>
+                    <button onClick={() => router.push("/dashboard/tools")} className="mt-4 cursor-pointer text-sm font-medium text-primary">Create a collection</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
       )}
       </div>
     </div>

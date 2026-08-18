@@ -507,14 +507,17 @@ export default function PostNavigationBar() {
                       {expandedCollection.description || "No description"}
                     </p>
                   </div>
-                  <button
+                  <motion.button
                     type="button"
                     onClick={() => setExpandedCollection(null)}
-                    className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    whileHover={{ rotate: 90, scale: 1.08 }}
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     aria-label="Close collection"
                   >
                     <X size={20} />
-                  </button>
+                  </motion.button>
                 </div>
 
                 <div

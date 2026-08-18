@@ -51,6 +51,8 @@ interface PublicUser {
   following: number;
   followedByMe: boolean;
   isMe: boolean;
+  showPosts: boolean;
+  showCollections: boolean;
   collections: Collection[];
 }
 
@@ -67,7 +69,7 @@ export default function VisiterProfile() {
   const [followBusy, setFollowBusy] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [activeTab, setActiveTab] = useState<"collections" | "posts">("collections");
+  const [activeTab, setActiveTab] = useState<"collections" | "posts">("posts");
   const [myCollections, setMyCollections] = useState<Collection[]>([]);
   const [importing, setImporting] = useState<string | null>(null);
   const [toolToImport, setToolToImport] = useState<{ collection: Collection; tool: Tool } | null>(null);
@@ -304,7 +306,7 @@ export default function VisiterProfile() {
             </div>
           </div>
 
-          <div className="part-1 flex w-full flex-col items-start gap-2 sm:items-end lg:h-[20%] lg:justify-center lg:px-10">
+          <div className="part-1 mt-1 flex w-full flex-col items-start gap-2 sm:items-end lg:mt-4 lg:h-[20%] lg:justify-center lg:px-10">
             <div className="flex items-center gap-2 px-1.5">
               <p className="text-foreground">Current Role</p>
               <BriefcaseBusiness size={18} className="text-foreground" />
@@ -337,7 +339,7 @@ export default function VisiterProfile() {
           </div>
 
           <div className="part-4 mt-4 flex flex-col gap-3 lg:mt-0 lg:h-[12%] lg:flex-row lg:items-center">
-            <div className="profile-location relative flex items-center lg:h-full lg:w-[50%]">
+            <div className="profile-location relative flex items-start lg:h-full lg:w-[50%]">
               <p className="text-foreground lg:absolute lg:left-27">
                 {user.location || "No location"}
               </p>
@@ -358,13 +360,13 @@ export default function VisiterProfile() {
                   <p className="text-foreground">This is you</p>
                 </button>
               ) : (
-                <div className="flex h-11 w-full items-center gap-2 sm:w-75 lg:absolute lg:left-27 lg:h-full">
+                <div className="flex h-11 w-full items-start gap-2 sm:w-75 lg:absolute lg:left-27 lg:h-full">
                   <Multibutton
                     tag="follow-profile"
                     label={user.followedByMe ? "Following" : "Follow"}
                     icon={user.followedByMe ? Check : UserPlus}
                     onClick={toggleFollow}
-                    className={`h-11! rounded-4xl lg:h-[60%]! ${
+                    className={`h-11! rounded-4xl lg:h-[50%]! ${
                       user.followedByMe ? "bg-foreground text-card" : ""
                     } w-[50%]`}
                     iconClassName={user.followedByMe ? "text-card" : "text-foreground"}
@@ -375,7 +377,7 @@ export default function VisiterProfile() {
                     label="Message"
                     icon={MessageCircle}
                     onClick={() => router.push(`/dashboard/messages?user=${user.id}`)}
-                    className="h-11! w-[50%] rounded-4xl bg-foreground text-card lg:h-[60%]!"
+                    className="h-11! w-[50%] rounded-4xl bg-foreground text-card lg:h-[50%]!"
                     iconClassName="text-card"
                     textClassName="text-card"
                   />
@@ -391,10 +393,10 @@ export default function VisiterProfile() {
         </div>
 
         <div className="part-3-post-navigator w-full py-4">
-          <div className="mb-4 flex h-16 w-full border-b border-border">
+          <div className="mb-4 mt-4 flex h-16 w-full border-b border-border">
             {([
-              { id: "collections" as const, label: "Collections", icon: Folder },
               { id: "posts" as const, label: "Posts", icon: LayoutGrid },
+              { id: "collections" as const, label: "Collections", icon: Folder },
             ]).map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
@@ -564,13 +566,17 @@ export default function VisiterProfile() {
                     </div>
                     <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{expandedCollection.description || "No description"}</p>
                   </div>
-                  <button
+                  <motion.button
+                    type="button"
                     onClick={() => setExpandedCollection(null)}
-                    className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    whileHover={{ rotate: 90, scale: 1.08 }}
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     aria-label="Close collection"
                   >
                     <X size={20} />
-                  </button>
+                  </motion.button>
                 </div>
 
                 <div

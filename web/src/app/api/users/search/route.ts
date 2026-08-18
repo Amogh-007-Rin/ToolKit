@@ -11,14 +11,20 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
-  if (!q) {
-    return NextResponse.json({ users: [] });
-  }
 
   const users = await prisma.user.findMany({
     where: {
-      tag: { contains: q, mode: "insensitive" },
       NOT: { id: userId },
+      ...(q
+        ? {
+            OR: [
+              { tag: { contains: q, mode: "insensitive" as const } },
+              { name: { contains: q, mode: "insensitive" as const } },
+              { role: { contains: q, mode: "insensitive" as const } },
+              { skills: { has: q } },
+            ],
+          }
+        : {}),
     },
     select: {
       id: true,
@@ -31,9 +37,10 @@ export async function GET(req: Request) {
       skills: true,
       followers: true,
       following: true,
+      createdAt: true,
     },
     take: 20,
-    orderBy: { tag: "asc" },
+    orderBy: q ? { tag: "asc" } : [{ followers: "desc" }, { createdAt: "desc" }],
   });
 
   const resolved = await Promise.all(

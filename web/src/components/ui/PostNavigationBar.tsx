@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, Bookmark, Folder, Plus, Play, X } from "lucide-react";
+import { LayoutGrid, Bookmark, Folder, Plus, Play, Trash2, X } from "lucide-react";
 import MakePostCard from "@/components/forms/MakePostCard";
 import EditPostCard from "@/components/forms/EditPostCard";
 import PostDetailCard from "@/components/ui/PostDetailCard";
 import ConfirmDeleteCard from "@/app/dashboard/_components/cards/ConfirmDeleteCard";
+import { TOOL_ICONS } from "@/app/dashboard/_components/tool-icons";
 import type { Post } from "@/types/posts";
 import type { Collection } from "@/types/collections";
 
@@ -18,6 +19,16 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "saved", label: "Saved", icon: Bookmark },
   { id: "collections", label: "Collections", icon: Folder },
 ];
+
+function faviconUrl(link: string | null): string | null {
+  if (!link) return null;
+  try {
+    const host = new URL(link).hostname;
+    return `https://www.google.com/s2/favicons?domain=${host}&sz=64`;
+  } catch {
+    return null;
+  }
+}
 
 export default function PostNavigationBar() {
   const [activeTab, setActiveTab] = useState<Tab>("posts");
@@ -31,6 +42,9 @@ export default function PostNavigationBar() {
   const [isChoosingCollections, setIsChoosingCollections] = useState(false);
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
   const [savingShowcase, setSavingShowcase] = useState(false);
+  const [collectionPostToRemove, setCollectionPostToRemove] = useState<Collection | null>(null);
+  const [removingCollectionPost, setRemovingCollectionPost] = useState(false);
+  const [expandedCollection, setExpandedCollection] = useState<Collection | null>(null);
 
   const loadPosts = useCallback(async () => {
     try {
@@ -109,6 +123,30 @@ export default function PostNavigationBar() {
       }
     } catch {
       // silently fail
+    }
+  };
+
+  const removeCollectionPost = async () => {
+    if (!collectionPostToRemove || removingCollectionPost) return;
+    setRemovingCollectionPost(true);
+    try {
+      const remainingIds = selectedCollectionIds.filter((id) => id !== collectionPostToRemove.id);
+      const res = await fetch("/api/collections/showcase", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collectionIds: remainingIds }),
+      });
+      if (!res.ok) return;
+      const removedId = collectionPostToRemove.id;
+      setCollections((current) =>
+        current.map((collection) =>
+          collection.id === removedId ? { ...collection, showcased: false } : collection,
+        ),
+      );
+      setSelectedCollectionIds(remainingIds);
+      setCollectionPostToRemove(null);
+    } finally {
+      setRemovingCollectionPost(false);
     }
   };
 
@@ -265,24 +303,78 @@ export default function PostNavigationBar() {
               collections.some((collection) => collection.showcased) ? (
                 <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {collections.filter((collection) => collection.showcased).map((collection) => (
-                    <div key={collection.id} className="flex min-h-48 flex-col rounded-3xl border border-border bg-card p-5">
+                    <motion.div
+                      key={collection.id}
+                      layoutId={`profile-collection-${collection.id}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setExpandedCollection(collection)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setExpandedCollection(collection);
+                        }
+                      }}
+                      whileHover={{ y: -4 }}
+                      className="relative flex min-h-48 min-w-0 cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-linear-to-br from-card via-card to-primary/6 p-5 text-left transition-colors hover:border-primary/40"
+                    >
+                      <div className="pointer-events-none absolute -right-12 -top-16 h-36 w-36 rounded-full bg-primary/10 blur-3xl" />
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="truncate text-lg font-semibold text-foreground">{collection.title}</h3>
-                        <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
-                          {collection.tools.length} {collection.tools.length === 1 ? "tool" : "tools"}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+                            {collection.tools.length} {collection.tools.length === 1 ? "tool" : "tools"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setCollectionPostToRemove(collection);
+                            }}
+                            aria-label={`Remove ${collection.title} from profile`}
+                            title="Remove from profile"
+                            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </div>
                       <p className="mt-3 line-clamp-3 text-sm leading-5 text-muted-foreground">
                         {collection.description || "No description"}
                       </p>
-                      <div className="mt-auto flex flex-wrap gap-1.5 pt-5">
-                        {collection.tools.slice(0, 5).map((tool) => (
-                          <span key={tool.id} className="max-w-full truncate rounded-lg border border-border px-2 py-1 text-xs text-foreground/80">
-                            {tool.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                      {collection.tools.length > 0 && (
+                        <div className="relative mt-auto flex items-center border-t border-border/70 pt-4">
+                          <div className="flex min-w-0 items-center">
+                            {collection.tools.slice(0, 8).map((tool) => {
+                              const Icon = TOOL_ICONS[tool.icon] ?? TOOL_ICONS.sparkles;
+                              const logoUrl = tool.logoUrl ?? faviconUrl(tool.link);
+                              return logoUrl ? (
+                                <div
+                                  key={tool.id}
+                                  className="relative -ml-2 h-8 w-8 shrink-0 overflow-hidden rounded-full border-2 border-card bg-shade-background first:ml-0"
+                                  title={tool.name}
+                                >
+                                  <Image src={logoUrl} fill sizes="32px" alt={tool.name} unoptimized className="object-contain" />
+                                </div>
+                              ) : (
+                                <div
+                                  key={tool.id}
+                                  className="-ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-card bg-shade-background first:ml-0"
+                                  title={tool.name}
+                                >
+                                  <Icon size={15} className="text-muted-foreground" />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {collection.tools.length > 8 && (
+                            <span className="ml-2 shrink-0 text-xs font-medium text-muted-foreground">
+                              +{collection.tools.length - 8} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </motion.div>
                   ))}
                 </div>
               ) : (
@@ -371,6 +463,113 @@ export default function PostNavigationBar() {
         onCancel={() => setIsConfirmingDelete(false)}
         onConfirm={deletePost}
       />
+
+      <ConfirmDeleteCard
+        isOpen={collectionPostToRemove !== null}
+        title="collection post"
+        message={`Remove “${collectionPostToRemove?.title ?? ""}” from your profile? The collection and its tools will stay in Tools.`}
+        confirmLabel="Remove"
+        onCancel={() => {
+          if (!removingCollectionPost) setCollectionPostToRemove(null);
+        }}
+        onConfirm={removeCollectionPost}
+      />
+
+      <AnimatePresence>
+        {expandedCollection && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close expanded collection"
+              className="fixed inset-0 z-40 bg-black/65 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setExpandedCollection(null)}
+            />
+            <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
+              <motion.div
+                layoutId={`profile-collection-${expandedCollection.id}`}
+                className="pointer-events-auto relative flex h-[70%] w-[70%] min-w-0 flex-col overflow-hidden rounded-3xl border border-border bg-linear-to-br from-card via-card to-primary/6 shadow-2xl max-sm:h-[85%] max-sm:w-[94%]"
+              >
+                <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-primary/12 blur-3xl" />
+                <div className="relative flex shrink-0 items-start justify-between gap-4 border-b border-border p-5 sm:p-7">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="truncate text-xl font-semibold text-foreground sm:text-2xl">
+                        {expandedCollection.title}
+                      </h2>
+                      <span className="rounded-full border border-border bg-background/50 px-2.5 py-1 text-xs text-muted-foreground">
+                        {expandedCollection.tools.length} {expandedCollection.tools.length === 1 ? "tool" : "tools"}
+                      </span>
+                    </div>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                      {expandedCollection.description || "No description"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedCollection(null)}
+                    className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    aria-label="Close collection"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div
+                  data-lenis-prevent
+                  className="thin-scrollbar relative min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain p-4 sm:p-6"
+                >
+                  {expandedCollection.tools.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+                      {expandedCollection.tools.map((tool) => {
+                        const Icon = TOOL_ICONS[tool.icon] ?? TOOL_ICONS.sparkles;
+                        const logoUrl = tool.logoUrl ?? faviconUrl(tool.link);
+                        return (
+                          <div key={tool.id} className="flex min-h-32 flex-col rounded-2xl border border-border/80 bg-card/80 p-4">
+                            <div className="flex items-start gap-3">
+                              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-shade-background">
+                                {logoUrl ? (
+                                  <Image src={logoUrl} fill sizes="40px" alt={tool.name} unoptimized className="object-contain" />
+                                ) : (
+                                  <Icon size={18} className="text-muted-foreground" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-semibold text-foreground">{tool.name}</p>
+                                {tool.link && (
+                                  <a
+                                    href={tool.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block truncate text-xs text-primary hover:underline"
+                                  >
+                                    {tool.link}
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                            {tool.description && (
+                              <p className="mt-3 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                                {tool.description}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                      This collection has no tools yet.
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isChoosingCollections && (

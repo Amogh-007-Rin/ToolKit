@@ -7,9 +7,11 @@ interface ConfirmDeleteCardProps {
     title: string;
     onConfirm: () => void;
     onCancel: () => void;
+    message?: string;
+    confirmLabel?: string;
 }
 
-export default function ConfirmDeleteCard({ isOpen, title, onConfirm, onCancel }: ConfirmDeleteCardProps) {
+export default function ConfirmDeleteCard({ isOpen, title, onConfirm, onCancel, message, confirmLabel = "Delete" }: ConfirmDeleteCardProps) {
     return (
         <AnimatePresence>
             {isOpen && (
@@ -31,7 +33,7 @@ export default function ConfirmDeleteCard({ isOpen, title, onConfirm, onCancel }
                             className="pointer-events-auto w-full max-w-sm rounded-3xl bg-card border border-border shadow-2xl p-6 flex flex-col gap-6"
                         >
                             <p className="text-lg text-foreground font-semibold text-center">
-                                Are you sure you want to delete your {title}?
+                                {message ?? `Are you sure you want to delete your ${title}?`}
                             </p>
                             <div className="flex gap-3">
                                 <motion.button
@@ -48,7 +50,7 @@ export default function ConfirmDeleteCard({ isOpen, title, onConfirm, onCancel }
                                     onClick={onConfirm}
                                     className="flex-1 h-11 bg-destructive text-destructive-foreground rounded-xl font-medium text-sm hover:bg-destructive/90 transition-colors cursor-pointer"
                                 >
-                                    Delete
+                                    {confirmLabel}
                                 </motion.button>
                             </div>
                         </motion.div>

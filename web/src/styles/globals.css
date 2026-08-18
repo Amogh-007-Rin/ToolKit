@@ -24,6 +24,8 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-ring: var(--ring);
+  --color-skeleton: var(--skeleton);
+  --color-skeleton-highlight: var(--skeleton-highlight);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-theme-button-insider: var(--theme-button-insider);
@@ -48,6 +50,8 @@
   --border: #e4e2df;
   --input: #f1f0ec;
   --ring: #9d6ffe;
+  --skeleton: #d8d4cf;
+  --skeleton-highlight: #e8e4df;
   --destructive: #f4696a;
   --destructive-foreground: #ffffff;
   --shade-background: #dedede77;
@@ -71,6 +75,8 @@
   --border: #2a2a2a;
   --input: #252525;
   --ring: #9d6ffe;
+  --skeleton: #2f2f2f;
+  --skeleton-highlight: #414141;
   --destructive: #ff6b6b;
   --destructive-foreground: #ffffff;
   --shade-background:#2a2a2a;
@@ -82,6 +88,25 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+html[data-high-contrast="true"] {
+  --muted-foreground: #494455;
+  --border: #aaa5a0;
+}
+
+html.dark[data-high-contrast="true"] {
+  --muted-foreground: #c4bfd0;
+  --border: #696969;
 }
 
 html,

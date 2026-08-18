@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { X, Bell } from "lucide-react";
@@ -21,6 +21,12 @@ interface NotificationPanelProps {
   onClose: () => void;
 }
 
+function notificationMessage(type: string): string {
+  if (type === "like") return "liked your post";
+  if (type === "comment") return "commented on your post";
+  return "started following you";
+}
+
 const DROPLETS = [
   { angle: -15, dist: 60, delay: 0.08 },
   { angle: 10, dist: 80, delay: 0.15 },
@@ -35,6 +41,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+  const dismissedIds = useRef(new Set<string>());
 
   useEffect(() => {
     if (!isOpen) return;
@@ -44,7 +51,9 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
         const res = await fetch("/api/notifications?limit=7");
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled) setNotifications(data.notifications ?? []);
+        if (!cancelled) {
+          setNotifications((data.notifications ?? []).filter((item: AppNotification) => !dismissedIds.current.has(item.id)));
+        }
         await fetch("/api/notifications", { method: "PATCH" });
         if (!cancelled) {
           setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -70,7 +79,8 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
     }, 400);
   };
 
-  const clearNotification = async (id: string) => {
+  const clearNotification = (id: string) => {
+    dismissedIds.current.add(id);
     setRemovingIds((prev) => new Set(prev).add(id));
     setTimeout(() => {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -80,15 +90,10 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
         return next;
       });
     }, 250);
-    try {
-      await fetch(`/api/notifications/${id}`, { method: "DELETE" });
-    } catch {
-      // silently fail
-    }
   };
 
-  const clearAll = async () => {
-    const previous = notifications;
+  const clearAll = () => {
+    notifications.forEach((notification) => dismissedIds.current.add(notification.id));
     notifications.forEach((n, i) => {
       setTimeout(() => {
         setRemovingIds((prev) => new Set(prev).add(n.id));
@@ -98,12 +103,6 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
       setNotifications([]);
       setRemovingIds(new Set());
     }, notifications.length * 120 + 300);
-    try {
-      await fetch("/api/notifications", { method: "DELETE" });
-    } catch {
-      setNotifications(previous);
-      setRemovingIds(new Set());
-    }
   };
 
   return (
@@ -292,7 +291,7 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                             <div className="min-w-0 flex-1">
                               <p className="text-sm text-foreground">
                                 <span className="font-semibold">{notification.actor.name || "Someone"}</span>{" "}
-                                started following you
+                                {notificationMessage(notification.type)}
                               </p>
                               <p className="text-xs text-muted-foreground">{timeAgo(notification.createdAt)}</p>
                             </div>

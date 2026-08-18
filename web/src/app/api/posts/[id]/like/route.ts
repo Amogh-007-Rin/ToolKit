@@ -10,7 +10,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const { id } = await params;
 
-  const post = await prisma.post.findUnique({ where: { id } });
+  const post = await prisma.post.findUnique({
+    where: { id },
+    include: { user: { select: { notifyLikes: true } } },
+  });
   if (!post) {
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
   }
@@ -19,11 +22,22 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     where: { postId_userId: { postId: id, userId } },
   });
 
-  if (existing) {
-    await prisma.like.delete({ where: { id: existing.id } });
-  } else {
-    await prisma.like.create({ data: { postId: id, userId } });
-  }
+  await prisma.$transaction(async (tx) => {
+    if (existing) {
+      await tx.like.delete({ where: { id: existing.id } });
+      await tx.notification.deleteMany({
+        where: { userId: post.userId, actorId: userId, postId: id, type: "like" },
+      });
+      return;
+    }
+
+    await tx.like.create({ data: { postId: id, userId } });
+    if (post.userId !== userId && post.user.notifyLikes) {
+      await tx.notification.create({
+        data: { userId: post.userId, actorId: userId, postId: id, type: "like" },
+      });
+    }
+  });
 
   const likeCount = await prisma.like.count({ where: { postId: id } });
   return NextResponse.json({ liked: !existing, likeCount });

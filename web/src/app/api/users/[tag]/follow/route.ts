@@ -12,7 +12,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ tag: s
 
   const target = await prisma.user.findUnique({
     where: { tag },
-    select: { id: true },
+    select: { id: true, notifyFollows: true },
   });
 
   if (!target) {
@@ -41,6 +41,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ tag: s
           where: { id: userId },
           data: { following: { decrement: 1 } },
         }),
+        tx.notification.deleteMany({
+          where: { userId: target.id, actorId: userId, type: "follow" },
+        }),
       ]);
       return false;
     }
@@ -55,9 +58,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ tag: s
         where: { id: userId },
         data: { following: { increment: 1 } },
       }),
-      tx.notification.create({
-        data: { userId: target.id, actorId: userId, type: "follow" },
-      }),
+      ...(target.notifyFollows
+        ? [tx.notification.create({ data: { userId: target.id, actorId: userId, type: "follow" } })]
+        : []),
     ]);
     return true;
   });

@@ -32,6 +32,12 @@ model User {
   notifications Notification[] @relation("UserNotifications")
   notifiedActions Notification[] @relation("UserNotificationActors")
   aiChats       AIChat[]
+  notifyFollows Boolean      @default(true)
+  notifyLikes   Boolean      @default(true)
+  notifyComments Boolean     @default(true)
+  discoverable  Boolean      @default(true)
+  showPosts     Boolean      @default(true)
+  showCollections Boolean    @default(true)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   followers     BigInt       @default(0)
@@ -147,12 +153,15 @@ model Notification {
   actorId   String
   type      String
   postId    String?
+  commentId String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
   user      User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
   actor     User     @relation("UserNotificationActors", fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
+  @@index([userId, type])
+  @@index([commentId])
 }
 
 model Account {

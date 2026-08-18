@@ -190,7 +190,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
   }
 
-  await prisma.post.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.notification.deleteMany({ where: { postId: id } }),
+    prisma.post.delete({ where: { id } }),
+  ]);
 
   for (const m of post.media) {
     if (isStoredKey(m.url) && isOwnedObjectKey(m.url, userId, "posts")) {

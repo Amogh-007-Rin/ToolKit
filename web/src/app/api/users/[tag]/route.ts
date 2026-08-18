@@ -25,6 +25,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ tag: st
       skills: true,
       followers: true,
       following: true,
+      showPosts: true,
+      showCollections: true,
       collections: {
         where: { showcased: true },
         include: { tools: true },
@@ -55,6 +57,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ tag: st
   return NextResponse.json({
     user: {
       ...user,
+      collections: user.id === userId || user.showCollections ? user.collections : [],
       image,
       banner,
       followers: Number(user.followers),

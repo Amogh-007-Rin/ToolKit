@@ -57,18 +57,31 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     );
   }
 
-  const post = await prisma.post.findUnique({ where: { id } });
+  const post = await prisma.post.findUnique({
+    where: { id },
+    include: { user: { select: { notifyComments: true } } },
+  });
   if (!post) {
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
   }
 
-  const comment = await prisma.comment.create({
-    data: {
-      postId: id,
-      userId,
-      content: parsed.data.content,
-    },
-    include: { user: { select: COMMENT_USER_SELECT } },
+  const comment = await prisma.$transaction(async (tx) => {
+    const created = await tx.comment.create({
+      data: { postId: id, userId, content: parsed.data.content },
+      include: { user: { select: COMMENT_USER_SELECT } },
+    });
+    if (post.userId !== userId && post.user.notifyComments) {
+      await tx.notification.create({
+        data: {
+          userId: post.userId,
+          actorId: userId,
+          postId: id,
+          commentId: created.id,
+          type: "comment",
+        },
+      });
+    }
+    return created;
   });
 
   return NextResponse.json(
@@ -96,8 +109,14 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     return NextResponse.json({ error: "commentId is required" }, { status: 400 });
   }
 
-  const result = await prisma.comment.deleteMany({
-    where: { id: body.commentId, postId: id, userId },
+  const result = await prisma.$transaction(async (tx) => {
+    const deleted = await tx.comment.deleteMany({
+      where: { id: body.commentId, postId: id, userId },
+    });
+    if (deleted.count > 0) {
+      await tx.notification.deleteMany({ where: { commentId: body.commentId } });
+    }
+    return deleted;
   });
   if (result.count === 0) {
     return NextResponse.json({ error: "Comment not found" }, { status: 404 });

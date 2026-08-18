@@ -1,5 +1,5 @@
 const Skeleton = ({ className }: { className: string }) => (
-  <div className={`animate-pulse rounded-xl bg-muted ${className}`} />
+  <div className={`animate-pulse rounded-xl bg-skeleton ${className}`} />
 );
 
 export default function ProfileSkeleton() {
@@ -12,12 +12,12 @@ export default function ProfileSkeleton() {
     >
       <span className="sr-only">Loading profile</span>
       <div className="relative h-[25vh] min-h-44 w-full overflow-hidden bg-muted/70">
-        <div className="absolute inset-0 animate-pulse bg-linear-to-r from-muted via-primary/8 to-muted" />
+        <div className="absolute inset-0 animate-pulse bg-linear-to-r from-skeleton via-skeleton-highlight to-skeleton" />
       </div>
 
       <div className="relative mx-auto w-full px-6 pb-8 sm:px-10">
         <div className="absolute -top-16 left-8 sm:-top-20 sm:left-24">
-          <div className="h-32 w-32 animate-pulse rounded-full border-4 border-background bg-muted sm:h-40 sm:w-40" />
+          <div className="h-32 w-32 animate-pulse rounded-full border-4 border-background bg-skeleton sm:h-40 sm:w-40" />
         </div>
 
         <div className="flex min-h-52 flex-col gap-5 pt-20 sm:min-h-70 sm:pt-7">
@@ -55,7 +55,7 @@ export default function ProfileSkeleton() {
         {Array.from({ length: 10 }, (_, index) => (
           <div
             key={index}
-            className="aspect-4/5 animate-pulse rounded-lg bg-muted"
+            className="aspect-4/5 animate-pulse rounded-lg bg-skeleton"
             style={{ animationDelay: `${index * 45}ms` }}
           />
         ))}

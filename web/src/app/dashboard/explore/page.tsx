@@ -60,7 +60,7 @@ export default function ExplorePage() {
   return (
     <section className="relative flex h-full min-h-0 w-full flex-col overflow-hidden text-foreground">
       <header className="relative flex h-17 shrink-0 items-center justify-center border-b border-border/70 px-5">
-        <h1 className="text-[17px] font-bold tracking-[-0.02em]">Explore Creators</h1>
+        <h1 className="text-[17px] font-bold tracking-wider">Explore Creators</h1>
       </header>
 
       <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto pb-4 pt-3 sm:px-5">
@@ -73,7 +73,7 @@ export default function ExplorePage() {
           {loading ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
               {Array.from({ length: 10 }).map((_, index) => (
-                <div key={index} className="h-71 animate-pulse rounded-md bg-muted" />
+                <div key={index} className="h-71 animate-pulse rounded-md bg-skeleton" />
               ))}
             </div>
           ) : error ? (

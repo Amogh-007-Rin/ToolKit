@@ -15,7 +15,7 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
-import Spinner from "@/components/ui/loaders/Spinner";
+import SpikesLoader from "@/components/ui/loaders/SpikesLoader";
 import type { Post, PostComment } from "@/types/posts";
 
 interface PostDetailCardProps {
@@ -574,9 +574,9 @@ export default function PostDetailCard({
                         whileHover={commentInput.trim() ? { scale: 1.03 } : undefined}
                         whileTap={commentInput.trim() ? { scale: 0.95 } : undefined}
                         aria-label="Post comment"
-                        className="h-9 min-w-9 px-3 sm:px-4 bg-primary text-primary-foreground rounded-xl text-sm font-semibold shadow-[0_8px_24px_-8px_rgba(157,111,254,0.8)] hover:bg-primary/90 disabled:opacity-40 disabled:shadow-none transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        className="h-9 min-w-9 px-3 sm:px-4 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-40 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                       >
-                        {commentPosting ? <Spinner size="xs" label="Posting comment" /> : <><Send size={14} /><span className="hidden sm:inline">Comment</span></>}
+                        {commentPosting ? <SpikesLoader className="size-4" /> : <><Send size={14} /><span className="hidden sm:inline">Comment</span></>}
                       </motion.button>
                     </motion.div>
                   </div>

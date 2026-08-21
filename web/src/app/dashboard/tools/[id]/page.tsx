@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Lenis from "lenis";
+import { DESKTOP_SCROLL_QUERY } from "@/lib/desktopScroll";
 import { ExternalLink, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useCollections } from "../../_components/CollectionsProvider";
 import { TOOL_ICONS } from "../../_components/tool-icons";
@@ -57,15 +58,6 @@ export default function CollectionDetailPage() {
         const content = contentRef.current;
         if (!wrapper || !content) return;
 
-        const lenis = new Lenis({
-            wrapper,
-            content,
-            duration: 1.2,
-            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-            smoothWheel: true,
-            syncTouch: true,
-            autoRaf: true,
-        });
         const updateBar = (scroll: number, limit: number) => {
             const rail = railRef.current;
             const fill = barFillRef.current;
@@ -75,23 +67,65 @@ export default function CollectionDetailPage() {
             const travel = rail.clientHeight * 0.93;
             fill.style.transform = `translateY(${progress * travel}px)`;
         };
-        const onScroll = ({ scroll, limit }: { scroll: number; limit: number }) => {
+
+        const query = window.matchMedia(DESKTOP_SCROLL_QUERY);
+        let lenis: Lenis | null = null;
+        let resizeObserver: ResizeObserver | null = null;
+
+        const onLenisScroll = ({ scroll, limit }: { scroll: number; limit: number }) => {
             updateBar(scroll, limit);
         };
-        lenis.on("scroll", onScroll);
-        updateBar(0, lenis.limit);
+        const onNativeScroll = () =>
+            updateBar(wrapper.scrollTop, wrapper.scrollHeight - wrapper.clientHeight);
 
-        const resizeObserver = new ResizeObserver(() => {
-            lenis.resize();
-            updateBar(lenis.scroll, lenis.limit);
-        });
-        resizeObserver.observe(wrapper);
-        resizeObserver.observe(content);
+        const setup = () => {
+            if (lenis) return;
+            wrapper.removeEventListener("scroll", onNativeScroll);
+            lenis = new Lenis({
+                wrapper,
+                content,
+                duration: 1.2,
+                easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+                smoothWheel: true,
+                syncTouch: true,
+                autoRaf: true,
+            });
+            lenis.on("scroll", onLenisScroll);
+            updateBar(0, lenis.limit);
+            resizeObserver = new ResizeObserver(() => {
+                lenis?.resize();
+                if (lenis) updateBar(lenis.scroll, lenis.limit);
+            });
+            resizeObserver.observe(wrapper);
+            resizeObserver.observe(content);
+        };
+        const teardown = () => {
+            if (lenis) {
+                lenis.off("scroll", onLenisScroll);
+                lenis.destroy();
+                lenis = null;
+            }
+            resizeObserver?.disconnect();
+            resizeObserver = null;
+            wrapper.addEventListener("scroll", onNativeScroll, { passive: true });
+            onNativeScroll();
+        };
+        const handleChange = (event: MediaQueryList | MediaQueryListEvent) => {
+            if (event.matches) setup();
+            else teardown();
+        };
+
+        handleChange(query);
+        query.addEventListener("change", handleChange);
 
         return () => {
-            lenis.off("scroll", onScroll);
-            resizeObserver.disconnect();
-            lenis.destroy();
+            query.removeEventListener("change", handleChange);
+            wrapper.removeEventListener("scroll", onNativeScroll);
+            if (lenis) {
+                lenis.off("scroll", onLenisScroll);
+                lenis.destroy();
+            }
+            resizeObserver?.disconnect();
         };
     }, [loading]);
 

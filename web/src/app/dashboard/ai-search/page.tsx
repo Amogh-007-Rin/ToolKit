@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import Lenis from "lenis";
+import { DESKTOP_SCROLL_QUERY, isDesktopScroll } from "@/lib/desktopScroll";
 import {
   ArrowUp,
   ExternalLink,
@@ -152,7 +153,7 @@ export default function AISearchPage() {
   }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    bottomRef.current?.scrollIntoView({ behavior: isDesktopScroll() ? "smooth" : "auto", block: "end" });
   }, [messages, loading]);
 
   useEffect(
@@ -166,15 +167,7 @@ export default function AISearchPage() {
     const el = scrollRef.current;
     const content = contentRef.current;
     if (!el || !content) return;
-    const lenis = new Lenis({
-      wrapper: el,
-      content,
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-      syncTouch: true,
-      autoRaf: true,
-    });
+
     const updateBar = (scroll: number, limit: number) => {
       const rail = railRef.current;
       const fill = barFillRef.current;
@@ -184,20 +177,64 @@ export default function AISearchPage() {
       const travel = rail.clientHeight * 0.93;
       fill.style.transform = `translateY(${progress * travel}px)`;
     };
-    const onScroll = ({ scroll, limit }: { scroll: number; limit: number }) =>
+
+    const query = window.matchMedia(DESKTOP_SCROLL_QUERY);
+    let lenis: Lenis | null = null;
+    let ro: ResizeObserver | null = null;
+
+    const onLenisScroll = ({ scroll, limit }: { scroll: number; limit: number }) =>
       updateBar(scroll, limit);
-    lenis.on("scroll", onScroll);
-    updateBar(0, lenis.limit);
-    const ro = new ResizeObserver(() => {
-      lenis.resize();
-      updateBar(lenis.scroll, lenis.limit);
-    });
-    if (contentRef.current) ro.observe(contentRef.current);
-    if (scrollRef.current) ro.observe(scrollRef.current);
+    const onNativeScroll = () =>
+      updateBar(el.scrollTop, el.scrollHeight - el.clientHeight);
+
+    const setup = () => {
+      if (lenis) return;
+      el.removeEventListener("scroll", onNativeScroll);
+      lenis = new Lenis({
+        wrapper: el,
+        content,
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        syncTouch: true,
+        autoRaf: true,
+      });
+      lenis.on("scroll", onLenisScroll);
+      updateBar(0, lenis.limit);
+      ro = new ResizeObserver(() => {
+        lenis?.resize();
+        if (lenis) updateBar(lenis.scroll, lenis.limit);
+      });
+      ro.observe(content);
+      ro.observe(el);
+    };
+    const teardown = () => {
+      if (lenis) {
+        lenis.off("scroll", onLenisScroll);
+        lenis.destroy();
+        lenis = null;
+      }
+      ro?.disconnect();
+      ro = null;
+      el.addEventListener("scroll", onNativeScroll, { passive: true });
+      onNativeScroll();
+    };
+    const handleChange = (event: MediaQueryList | MediaQueryListEvent) => {
+      if (event.matches) setup();
+      else teardown();
+    };
+
+    handleChange(query);
+    query.addEventListener("change", handleChange);
+
     return () => {
-      lenis.off("scroll", onScroll);
-      ro.disconnect();
-      lenis.destroy();
+      query.removeEventListener("change", handleChange);
+      el.removeEventListener("scroll", onNativeScroll);
+      if (lenis) {
+        lenis.off("scroll", onLenisScroll);
+        lenis.destroy();
+      }
+      ro?.disconnect();
     };
   }, []);
 
@@ -358,7 +395,7 @@ export default function AISearchPage() {
           {messages.length === 0 ? (
             <div className="flex h-full min-h-[50vh] flex-col items-center justify-center gap-6 sm:gap-8">
               <div className="flex flex-col items-center gap-4 text-center">
-                <h2 className="text-xl font-light leading-1.5 tracking-wide text-foreground sm:text-2xl">
+                <h2 className="text-xl font-light leading-loose tracking-wide text-foreground sm:text-2xl sm:leading-1.5">
                   What kind of tools should i find you today ?
                 </h2>
                 <p className="text-sm text-muted-foreground max-w-md font-thin">

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
+import { DESKTOP_SCROLL_QUERY } from "@/lib/desktopScroll";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
@@ -194,22 +195,42 @@ export default function VisiterProfile() {
     const content = contentRef.current;
     if (!wrapper || !content) return;
 
-    const lenis = new Lenis({
-      wrapper,
-      content,
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-      syncTouch: true,
-      autoRaf: true,
-    });
-    const resizeObserver = new ResizeObserver(() => lenis.resize());
-    resizeObserver.observe(wrapper);
-    resizeObserver.observe(content);
+    const query = window.matchMedia(DESKTOP_SCROLL_QUERY);
+    let lenis: Lenis | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+
+    const setup = () => {
+      if (lenis) return;
+      lenis = new Lenis({
+        wrapper,
+        content,
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        syncTouch: true,
+        autoRaf: true,
+      });
+      resizeObserver = new ResizeObserver(() => lenis?.resize());
+      resizeObserver.observe(wrapper);
+      resizeObserver.observe(content);
+    };
+    const teardown = () => {
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+      lenis?.destroy();
+      lenis = null;
+    };
+    const handleChange = (event: MediaQueryList | MediaQueryListEvent) => {
+      if (event.matches) setup();
+      else teardown();
+    };
+
+    handleChange(query);
+    query.addEventListener("change", handleChange);
 
     return () => {
-      resizeObserver.disconnect();
-      lenis.destroy();
+      query.removeEventListener("change", handleChange);
+      teardown();
     };
   }, [loading, notFound]);
 

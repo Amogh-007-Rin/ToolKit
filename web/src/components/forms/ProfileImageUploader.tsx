@@ -44,7 +44,7 @@ export default function ProfileImageUploader({
   const uploading = progress !== null;
 
   return (
-    <div className="absolute -top-14 left-4 z-10 flex h-28 w-28 flex-col items-center justify-center rounded-full sm:-top-20 sm:left-24 sm:h-40 sm:w-40">
+    <div className="absolute -top-14 left-4 z-10 flex h-28 w-28 flex-col items-center justify-center rounded-full sm:-top-20 sm:left-12 sm:h-40 sm:w-40">
       {/* Circular Profile Wrapper */}
       <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-background group">
         {/* Profile Image Render Container */}

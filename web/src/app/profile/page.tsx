@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
+import { DESKTOP_SCROLL_QUERY } from "@/lib/desktopScroll";
 import BannerUploader from "@/components/forms/BannerUploader";
 import ProfileImageUploader from "@/components/forms/ProfileImageUploader";
 import { ArrowLeft, BriefcaseBusiness, Star } from "lucide-react";
@@ -69,22 +70,42 @@ export default function ProfilePage() {
     const content = contentRef.current;
     if (!wrapper || !content) return;
 
-    const lenis = new Lenis({
-      wrapper,
-      content,
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-      syncTouch: true,
-      autoRaf: true,
-    });
-    const resizeObserver = new ResizeObserver(() => lenis.resize());
-    resizeObserver.observe(wrapper);
-    resizeObserver.observe(content);
+    const query = window.matchMedia(DESKTOP_SCROLL_QUERY);
+    let lenis: Lenis | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+
+    const setup = () => {
+      if (lenis) return;
+      lenis = new Lenis({
+        wrapper,
+        content,
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        syncTouch: true,
+        autoRaf: true,
+      });
+      resizeObserver = new ResizeObserver(() => lenis?.resize());
+      resizeObserver.observe(wrapper);
+      resizeObserver.observe(content);
+    };
+    const teardown = () => {
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+      lenis?.destroy();
+      lenis = null;
+    };
+    const handleChange = (event: MediaQueryList | MediaQueryListEvent) => {
+      if (event.matches) setup();
+      else teardown();
+    };
+
+    handleChange(query);
+    query.addEventListener("change", handleChange);
 
     return () => {
-      resizeObserver.disconnect();
-      lenis.destroy();
+      query.removeEventListener("change", handleChange);
+      teardown();
     };
   }, [loading]);
 
@@ -170,17 +191,17 @@ export default function ProfilePage() {
           </div>
           <div className="part-2 mt-5 flex items-center lg:mt-0 lg:h-[20%]">
             <div className="profile-name relative flex w-full flex-col lg:h-full lg:justify-center">
-              <p className="text-2xl font-bold text-foreground lg:absolute lg:left-27 lg:top-4">
+              <p className="text-2xl font-bold text-foreground lg:absolute lg:left-16 lg:top-4">
                 {loading ? "..." : (profile.name || "Your Name")}
               </p>
-              <p className="text-sm font-light text-foreground lg:absolute lg:left-27 lg:top-12">
+              <p className="text-sm font-light text-foreground lg:absolute lg:left-16 lg:top-12">
                 {loading ? "..." : (profile.tag ? `@${profile.tag}` : "@toolkit-tag")}
               </p>
             </div>
           </div>
           <div className="part-3 mt-4 flex items-center lg:mt-0 lg:min-h-[10%] lg:py-2">
             <div className="profile-occupation flex w-full flex-col gap-3 lg:min-h-full lg:flex-row lg:items-center">
-              <p className="w-full max-w-xl whitespace-normal wrap-break-word text-foreground leading-5 lg:ml-27 lg:w-[40%]">
+              <p className="w-full max-w-xl whitespace-normal wrap-break-word text-foreground leading-5 lg:ml-16 lg:w-[40%]">
                 {loading ? "..." : (profile.bio || "Your bio")}
               </p>
               <p className="text-base text-muted-foreground lg:ml-auto lg:mr-10">
@@ -190,7 +211,7 @@ export default function ProfilePage() {
           </div>
           <div className="part-4 mt-4 flex flex-col gap-3 lg:mt-0 lg:h-[12%] lg:flex-row lg:items-center">
             <div className="profile-location relative flex items-start lg:h-full lg:w-[50%]">
-              <p className="text-foreground lg:absolute lg:left-27">
+              <p className="text-foreground lg:absolute lg:left-16">
                 {loading ? "..." : (profile.location || "Your location")}
               </p>
             </div>
@@ -201,7 +222,7 @@ export default function ProfilePage() {
           </div>
           <div className="part-5 mt-3 flex w-full flex-col gap-3 lg:mt-0 lg:h-[25%] lg:flex-row lg:items-center">
             <div className="left-part relative flex items-center lg:h-full lg:w-[30%]">
-              <div className="flex h-11 w-full items-start gap-2 sm:w-75 lg:absolute lg:left-27 lg:h-full">
+              <div className="flex h-11 w-full items-start gap-2 sm:w-75 lg:absolute lg:left-16 lg:h-full">
                 <Multibutton
                   tag="edit-profile"
                   label="Edit Profile"

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Lenis from "lenis";
+import { DESKTOP_SCROLL_QUERY } from "@/lib/desktopScroll";
 import ThemeToggleButton from "@/components/ui/buttons/ThemeToggleButton";
 import {
   Accessibility,
@@ -204,16 +205,6 @@ export default function SettingsPage() {
     const content = contentRef.current;
     if (!wrapper || !content) return;
 
-    const lenis = new Lenis({
-      wrapper,
-      content,
-      duration: 1.2,
-      easing: (value) => Math.min(1, 1.001 - Math.pow(2, -10 * value)),
-      smoothWheel: true,
-      syncTouch: true,
-      autoRaf: true,
-    });
-
     const updateBar = (scroll: number, limit: number) => {
       const rail = railRef.current;
       const fill = barFillRef.current;
@@ -223,21 +214,64 @@ export default function SettingsPage() {
       const travel = rail.clientHeight * 0.93;
       fill.style.transform = `translateY(${progress * travel}px)`;
     };
-    const onScroll = ({ scroll, limit }: { scroll: number; limit: number }) => updateBar(scroll, limit);
-    lenis.on("scroll", onScroll);
-    updateBar(0, lenis.limit);
 
-    const observer = new ResizeObserver(() => {
-      lenis.resize();
-      updateBar(lenis.scroll, lenis.limit);
-    });
-    observer.observe(content);
-    observer.observe(wrapper);
+    const query = window.matchMedia(DESKTOP_SCROLL_QUERY);
+    let lenis: Lenis | null = null;
+    let observer: ResizeObserver | null = null;
+
+    const onLenisScroll = ({ scroll, limit }: { scroll: number; limit: number }) =>
+      updateBar(scroll, limit);
+    const onNativeScroll = () =>
+      updateBar(wrapper.scrollTop, wrapper.scrollHeight - wrapper.clientHeight);
+
+    const setup = () => {
+      if (lenis) return;
+      wrapper.removeEventListener("scroll", onNativeScroll);
+      lenis = new Lenis({
+        wrapper,
+        content,
+        duration: 1.2,
+        easing: (value) => Math.min(1, 1.001 - Math.pow(2, -10 * value)),
+        smoothWheel: true,
+        syncTouch: true,
+        autoRaf: true,
+      });
+      lenis.on("scroll", onLenisScroll);
+      updateBar(0, lenis.limit);
+      observer = new ResizeObserver(() => {
+        lenis?.resize();
+        if (lenis) updateBar(lenis.scroll, lenis.limit);
+      });
+      observer.observe(content);
+      observer.observe(wrapper);
+    };
+    const teardown = () => {
+      if (lenis) {
+        lenis.off("scroll", onLenisScroll);
+        lenis.destroy();
+        lenis = null;
+      }
+      observer?.disconnect();
+      observer = null;
+      wrapper.addEventListener("scroll", onNativeScroll, { passive: true });
+      onNativeScroll();
+    };
+    const handleChange = (event: MediaQueryList | MediaQueryListEvent) => {
+      if (event.matches) setup();
+      else teardown();
+    };
+
+    handleChange(query);
+    query.addEventListener("change", handleChange);
 
     return () => {
-      lenis.off("scroll", onScroll);
-      observer.disconnect();
-      lenis.destroy();
+      query.removeEventListener("change", handleChange);
+      wrapper.removeEventListener("scroll", onNativeScroll);
+      if (lenis) {
+        lenis.off("scroll", onLenisScroll);
+        lenis.destroy();
+      }
+      observer?.disconnect();
     };
   }, []);
 

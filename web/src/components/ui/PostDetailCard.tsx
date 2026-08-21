@@ -407,7 +407,7 @@ export default function PostDetailCard({
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.12 }}
-                      className="relative flex flex-col gap-1 rounded-2xl bg-linear-to-br from-primary/8 via-muted/25 to-muted/10 border border-primary/10 p-3.5 overflow-hidden"
+                      className="relative flex shrink-0 flex-col gap-1 rounded-2xl bg-linear-to-br from-primary/8 via-muted/25 to-muted/10 border border-primary/10 p-3.5 overflow-hidden"
                     >
                       <div className="flex items-start gap-2">
                         <UserAvatar image={authorImage} name={authorName} />
@@ -431,7 +431,7 @@ export default function PostDetailCard({
                     </motion.div>
 
                     {commentsLoading ? (
-                      <div className="flex flex-col gap-3 py-2" aria-label="Loading comments">
+                        <div className="flex shrink-0 flex-col gap-3 py-2" aria-label="Loading comments">
                         {[0, 1].map((item) => (
                           <motion.div
                             key={item}
@@ -453,7 +453,7 @@ export default function PostDetailCard({
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         onClick={() => commentInputRef.current?.focus()}
-                        className="group mx-auto flex flex-col items-center gap-2 rounded-2xl px-6 py-5 text-center cursor-pointer"
+                        className="group mx-auto flex shrink-0 flex-col items-center gap-2 rounded-2xl px-6 py-5 text-center cursor-pointer"
                       >
                         <span className="grid h-10 w-10 place-items-center rounded-2xl bg-theme-button-insider/5 text-primary transition-transform group-hover:-translate-y-1">
                           <MessageCircle size={18} className="text-foreground"/>
@@ -470,7 +470,7 @@ export default function PostDetailCard({
                           exit={{ opacity: 0, x: 16, height: 0 }}
                           transition={{ delay: Math.min(index * 0.035, 0.25), duration: 0.24 }}
                           layout
-                          className="flex items-start gap-2.5 group rounded-xl px-1 py-1"
+                          className="flex shrink-0 items-start gap-2.5 group rounded-xl px-1 py-1"
                         >
                           <UserAvatar
                             image={comment.user.image}

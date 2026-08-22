@@ -377,7 +377,7 @@ function MessagesApp() {
     : [];
 
   return (
-    <div className="flex h-full min-h-0 w-full gap-2 md:flex-row md:gap-4">
+    <div className="message-page relative flex h-full min-h-0 w-full gap-2 overflow-hidden rounded-[2rem] bg-background/35 p-1 md:gap-3">
       <RoomList
         rooms={rooms}
         contacts={contacts}
@@ -399,6 +399,10 @@ function MessagesApp() {
           lastSeenMap={lastSeenMap}
           onSend={sendMessage}
           onTypingChange={sendTyping}
+          onBack={() => {
+            setActiveRoomId(null);
+            router.replace("/dashboard/messages");
+          }}
         />
       </div>
     </div>

@@ -307,7 +307,7 @@ export default function VisiterProfile() {
         </div>
 
         <div className="profile-info relative w-full px-4 pb-5 pt-18 sm:px-8 sm:pt-24 lg:h-[35vh] lg:min-h-80 lg:px-0 lg:pb-0 lg:pt-0">
-          <div className="absolute -top-14 left-4 z-10 flex h-28 w-28 flex-col items-center justify-center rounded-full sm:-top-20 sm:left-24 sm:h-40 sm:w-40">
+          <div className="absolute -top-14 left-4 z-10 flex h-28 w-28 flex-col items-center justify-center rounded-full sm:-top-20 sm:left-12 sm:h-40 sm:w-40">
             <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-background bg-shade-background">
               {user.image ? (
                 <Image
@@ -339,10 +339,10 @@ export default function VisiterProfile() {
 
           <div className="part-2 mt-5 flex items-center lg:mt-0 lg:h-[20%]">
             <div className="profile-name relative flex w-full flex-col lg:h-full lg:justify-center">
-              <p className="text-2xl font-bold text-foreground lg:absolute lg:left-27 lg:top-4">
+              <p className="text-2xl font-bold text-foreground lg:absolute lg:left-16 lg:top-4">
                 {user.name || "Unnamed User"}
               </p>
-              <p className="text-sm font-light text-foreground lg:absolute lg:left-27 lg:top-12">
+              <p className="text-sm font-light text-foreground lg:absolute lg:left-16 lg:top-12">
                 {user.tag ? `@${user.tag}` : "@toolkit-tag"}
               </p>
             </div>
@@ -350,7 +350,7 @@ export default function VisiterProfile() {
 
           <div className="part-3 mt-4 flex items-center lg:mt-0 lg:min-h-[10%] lg:py-2">
             <div className="profile-occupation flex w-full flex-col gap-3 lg:min-h-full lg:flex-row lg:items-center">
-              <p className="w-full max-w-xl whitespace-normal wrap-break-word text-foreground leading-5 lg:ml-27 lg:w-[40%]">
+              <p className="w-full max-w-xl whitespace-normal wrap-break-word text-foreground leading-5 lg:ml-16 lg:w-[40%]">
                 {user.bio || "No bio yet"}
               </p>
               <p className="text-base text-muted-foreground lg:ml-auto lg:mr-10 lg:shrink-0">
@@ -361,7 +361,7 @@ export default function VisiterProfile() {
 
           <div className="part-4 mt-4 flex flex-col gap-3 lg:mt-0 lg:h-[12%] lg:flex-row lg:items-center">
             <div className="profile-location relative flex items-start lg:h-full lg:w-[50%]">
-              <p className="text-foreground lg:absolute lg:left-27">
+              <p className="text-foreground lg:absolute lg:left-16">
                 {user.location || "No location"}
               </p>
             </div>
@@ -381,7 +381,7 @@ export default function VisiterProfile() {
                   <p className="text-foreground">This is you</p>
                 </button>
               ) : (
-                <div className="flex h-11 w-full items-start gap-2 sm:w-75 lg:absolute lg:left-27 lg:h-full">
+                <div className="flex h-11 w-full items-start gap-2 sm:w-75 lg:absolute lg:left-16 lg:h-full">
                   <Multibutton
                     tag="follow-profile"
                     label={user.followedByMe ? "Following" : "Follow"}

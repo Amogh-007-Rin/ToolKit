@@ -45,11 +45,11 @@
   --theme-button-insider: #000000;
   --primary: #ed4b4b;
   --primary-foreground: #ffffff;
-  --accent: #9d6ffe;
+  --accent: #ed4b4b;
   --accent-foreground: #ffffff;
   --border: #e4e2df;
   --input: #f1f0ec;
-  --ring: #9d6ffe;
+  --ring: #ed4b4b;
   --skeleton: #d8d4cf;
   --skeleton-highlight: #e8e4df;
   --destructive: #f4696a;
@@ -70,11 +70,11 @@
   --primary: #ed4b4b;
   --theme-button-insider: #ffffff;
   --primary-foreground: #ffffff;
-  --accent: #9d6ffe;
+  --accent: #ed4b4b;
   --accent-foreground: #ffffff;
   --border: #2a2a2a;
   --input: #252525;
-  --ring: #9d6ffe;
+  --ring: #ed4b4b;
   --skeleton: #2f2f2f;
   --skeleton-highlight: #414141;
   --destructive: #ff6b6b;
@@ -181,5 +181,15 @@ body {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
   width: 0;
-  height: 0;
+}
+
+.message-emoji-picker {
+  --epr-search-input-bg-color: transparent;
+  --epr-search-input-bg-color-active: transparent;
+  --epr-search-border-color: color-mix(in srgb, var(--primary) 60%, transparent);
+  --epr-search-border-color-active: var(--primary);
+}
+
+.message-emoji-picker .epr-search-container input {
+  background: transparent;
 }

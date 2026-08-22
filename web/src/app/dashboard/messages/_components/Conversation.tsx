@@ -3,7 +3,9 @@
 import { FormEvent, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Paperclip, SendHorizontal, X } from "lucide-react";
+import EmojiPicker, { Theme } from "emoji-picker-react";
+import { ArrowLeft, Camera, MoreVertical, Paperclip, Phone, SendHorizontal, Smile, X } from "lucide-react";
+import { useTheme } from "next-themes";
 import { timeAgo } from "@/lib/timeAgo";
 import { uploadChatMedia, useMediaUrl } from "@/services/media";
 import {
@@ -190,6 +192,27 @@ function TypingIndicator() {
   );
 }
 
+function dayKey(dateLike: string): string {
+  const date = new Date(dateLike);
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function dayLabel(dateLike: string): string {
+  const date = new Date(dateLike);
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86_400_000);
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function Conversation({
   room,
   contact,
@@ -202,6 +225,7 @@ export default function Conversation({
   lastSeenMap,
   onSend,
   onTypingChange,
+  onBack,
 }: {
   room: RoomListItem | null;
   contact?: Contact | null;
@@ -215,10 +239,13 @@ export default function Conversation({
   lastSeenMap: Record<string, string>;
   onSend: (content: string, attachments: OutgoingMedia[]) => void;
   onTypingChange: (typing: boolean, roomId: string) => void;
+  onBack?: () => void;
 }) {
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState<PendingMedia[]>([]);
   const [viewer, setViewer] = useState<{ url: string; kind: "image" | "video" } | null>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const { resolvedTheme } = useTheme();
   const [now, setNow] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -409,8 +436,14 @@ export default function Conversation({
 
   if (!room) {
     return (
-      <section className="flex-1 h-full bg-card rounded-3xl flex items-center justify-center">
-        <p className="text-muted-foreground">Select a conversation to start messaging</p>
+      <section className="message-empty-state flex h-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] border border-border/70 bg-sidebar/65 p-6 text-center shadow-sm backdrop-blur-xl">
+        <div>
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15 text-accent">
+            <SendHorizontal size={22} />
+          </div>
+          <p className="font-semibold text-foreground">Select a conversation</p>
+          <p className="mt-1 text-sm text-muted-foreground">Choose someone to start messaging.</p>
+        </div>
       </section>
     );
   }
@@ -420,8 +453,17 @@ export default function Conversation({
 
   return (
     <>
-      <section className="flex-1 h-full bg-card rounded-3xl flex flex-col overflow-hidden">
-      <header className="flex items-center gap-3 px-5 py-3 border-b border-border">
+      <section className="message-conversation relative flex h-full flex-1 flex-col overflow-hidden rounded-[1.75rem] border border-border/70 bg-card/65 shadow-sm backdrop-blur-xl">
+      <header className="mx-3 mt-3 flex items-center gap-3 rounded-2xl border border-border/70 bg-card/75 px-3 py-2.5 shadow-sm backdrop-blur-xl">
+        {onBack ? (
+          <button
+            onClick={onBack}
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+            aria-label="Back to conversations"
+          >
+            <ArrowLeft size={18} />
+          </button>
+        ) : null}
         {contact?.tag ? (
           <button
             onClick={() => router.push(`/profile/${contact.tag}`)}
@@ -433,44 +475,67 @@ export default function Conversation({
         ) : (
           <Avatar contact={contact} size={40} />
         )}
-        <div className="flex flex-col min-w-0">
-          <p className="text-foreground font-semibold truncate">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">
             {contact?.name ?? contact?.tag ?? "Unknown user"}
           </p>
-          <p className={`text-xs ${isOtherOnline ? "text-green-500" : "text-muted-foreground"}`}>
+          <p className={`mt-0.5 text-[11px] ${isOtherOnline ? "text-green-500" : "text-muted-foreground"}`}>
             {presenceLabel}
           </p>
         </div>
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <button className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded-xl hover:bg-muted hover:text-foreground sm:flex" aria-label="Start voice call">
+            <Phone size={16} />
+          </button>
+          <button className="hidden h-9 w-9 cursor-pointer items-center justify-center rounded-xl hover:bg-muted hover:text-foreground sm:flex" aria-label="Start video call">
+            <Camera size={17} />
+          </button>
+          <button className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl hover:bg-muted hover:text-foreground" aria-label="More conversation options">
+            <MoreVertical size={18} />
+          </button>
+        </div>
       </header>
 
-      <div ref={scrollRef} data-lenis-prevent className="flex-1 overflow-y-auto p-5 flex flex-col gap-2.5">
+      <div ref={scrollRef} data-lenis-prevent className="message-thread thin-scrollbar relative flex flex-1 flex-col gap-3 overflow-y-auto px-5 py-5">
         {error ? (
-          <p className="text-destructive text-sm bg-destructive/10 rounded-xl px-4 py-2">
+          <p className="relative rounded-xl bg-destructive/10 px-4 py-2 text-sm text-destructive">
             {error}
           </p>
         ) : null}
-        {messages.map((message) => (
-          <Bubble
-            key={message.id}
-            mine={message.senderId === meId}
-            meta={timeAgo(message.createdAt)}
-            media={
-              message.attachments.length > 0 ? (
-                <MediaShell count={message.attachments.length}>
-                  {message.attachments.map((attachment) => (
-                    <RemoteMedia
-                      key={attachment.key}
-                      attachment={attachment}
-                      onView={(url, kind) => setViewer({ url, kind })}
-                    />
-                  ))}
-                </MediaShell>
-              ) : undefined
-            }
-          >
-            {message.content}
-          </Bubble>
-        ))}
+        {messages.map((message, index) => {
+          const currentKey = dayKey(message.createdAt);
+          const prevKey = index > 0 ? dayKey(messages[index - 1].createdAt) : null;
+          const showDateLabel = index === 0 || currentKey !== prevKey;
+
+          return (
+            <div key={message.id} className="contents">
+              {showDateLabel ? (
+                <div className="relative mx-auto mb-1 text-[10px] font-medium text-muted-foreground">
+                  {dayLabel(message.createdAt)}
+                </div>
+              ) : null}
+              <Bubble
+                mine={message.senderId === meId}
+                meta={timeAgo(message.createdAt)}
+                media={
+                  message.attachments.length > 0 ? (
+                    <MediaShell count={message.attachments.length}>
+                      {message.attachments.map((attachment) => (
+                        <RemoteMedia
+                          key={attachment.key}
+                          attachment={attachment}
+                          onView={(url, kind) => setViewer({ url, kind })}
+                        />
+                      ))}
+                    </MediaShell>
+                  ) : undefined
+                }
+              >
+                {message.content}
+              </Bubble>
+            </div>
+          );
+        })}
         {tempMessages.map((temp) => (
           <Bubble
             key={temp.tempId}
@@ -507,7 +572,7 @@ export default function Conversation({
         {typingUsers.length > 0 ? <TypingIndicator /> : null}
       </div>
 
-      <form onSubmit={submit} className="p-4 border-t border-border flex flex-col gap-3">
+      <form onSubmit={submit} className="mx-3 mb-3 mt-1 flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/75 p-2.5 shadow-sm backdrop-blur-xl">
         {pending.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {pending.map((item) => (
@@ -556,11 +621,11 @@ export default function Conversation({
             ))}
           </div>
         ) : null}
-        <div className="flex items-end gap-3">
+        <div className="flex items-end gap-2">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="bg-muted text-muted-foreground rounded-full w-11 h-11 flex items-center justify-center cursor-pointer hover:text-foreground transition-colors"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors hover:text-foreground"
             aria-label="Attach media"
           >
             <Paperclip size={20} />
@@ -591,12 +656,44 @@ export default function Conversation({
             }}
             rows={1}
             placeholder="Type a message…"
-            className="flex-1 resize-none bg-input rounded-2xl px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="min-h-10 flex-1 resize-none rounded-xl border border-transparent bg-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
+          <div className="relative block">
+            <button
+              type="button"
+              onClick={() => setEmojiOpen((open) => !open)}
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Add emoji"
+              aria-expanded={emojiOpen}
+            >
+              <Smile size={18} />
+            </button>
+            {emojiOpen ? (
+              <div
+                data-lenis-prevent
+                className="absolute bottom-12 right-0 z-10 max-h-[min(390px,calc(100dvh-8rem))] overflow-y-auto overscroll-contain rounded-2xl shadow-xl"
+                onWheelCapture={(event) => event.stopPropagation()}
+                onTouchMoveCapture={(event) => event.stopPropagation()}
+              >
+                <EmojiPicker
+                  className="message-emoji-picker"
+                  onEmojiClick={(emojiData) => {
+                    setDraft((current) => `${current}${emojiData.emoji}`);
+                    setEmojiOpen(false);
+                  }}
+                  theme={resolvedTheme === "dark" ? Theme.DARK : Theme.LIGHT}
+                  lazyLoadEmojis
+                  width={320}
+                  height={390}
+                  previewConfig={{ showPreview: false }}
+                />
+              </div>
+            ) : null}
+          </div>
           <button
             type="submit"
             disabled={sendDisabled}
-            className="bg-primary text-primary-foreground rounded-full w-11 h-11 flex items-center justify-center cursor-pointer disabled:opacity-50"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Send message"
           >
             <SendHorizontal size={20} />

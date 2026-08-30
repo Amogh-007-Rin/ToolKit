@@ -80,6 +80,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           type: "comment",
         },
       });
+      await tx.notificationOutbox.create({ data: { userId: post.userId, eventType: "comment", payload: { postId: id, commentId: created.id, actorId: userId, summary: "Someone commented on your post" }, dedupeKey: `comment:${created.id}` } });
     }
     return created;
   });

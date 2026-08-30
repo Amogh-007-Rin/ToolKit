@@ -6,6 +6,10 @@ const PREFERENCE_SELECT = {
   notifyFollows: true,
   notifyLikes: true,
   notifyComments: true,
+  notifyMessages: true,
+  notifySocial: true,
+  pushEnabled: true,
+  pushPreview: true,
 } as const;
 
 export async function GET() {
@@ -32,7 +36,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const allowed = ["notifyFollows", "notifyLikes", "notifyComments"] as const;
+  const allowed = ["notifyFollows", "notifyLikes", "notifyComments", "notifyMessages", "notifySocial", "pushEnabled", "pushPreview"] as const;
   const data: Partial<Record<(typeof allowed)[number], boolean>> = {};
   for (const key of allowed) {
     if (key in body) {

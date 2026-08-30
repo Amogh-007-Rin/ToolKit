@@ -8,56 +8,237 @@ datasource db {
 }
 
 model User {
-  id            String       @id @default(cuid())
-  email         String       @unique
-  name          String?
-  image         String?
-  banner        String?
-  emailVerified DateTime?
-  password      String?
-  bio           String?
-  location      String?
-  role          String?
-  skills        String[]
-  tag           String?      @unique
-  accounts      Account[]
-  sessions      Session[]
-  collections   Collection[]
-  posts         Post[]
-  likes         Like[]
-  comments      Comment[]
-  saves         SavedPost[]
-  followingRel  Follow[] @relation("UserFollowing")
-  followersRel  Follow[] @relation("UserFollowers")
-  notifications Notification[] @relation("UserNotifications")
-  notifiedActions Notification[] @relation("UserNotificationActors")
-  aiChats       AIChat[]
-  notifyFollows Boolean      @default(true)
-  notifyLikes   Boolean      @default(true)
-  notifyComments Boolean     @default(true)
-  discoverable  Boolean      @default(true)
-  showPosts     Boolean      @default(true)
-  showCollections Boolean    @default(true)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  followers     BigInt       @default(0)
-  following     BigInt       @default(0)
+  id                        String               @id @default(cuid())
+  email                     String               @unique
+  name                      String?
+  image                     String?
+  banner                    String?
+  emailVerified             DateTime?
+  password                  String?
+  bio                       String?
+  location                  String?
+  role                      String?
+  skills                    String[]
+  tag                       String?              @unique
+  accounts                  Account[]
+  sessions                  Session[]
+  collections               Collection[]
+  posts                     Post[]
+  likes                     Like[]
+  comments                  Comment[]
+  saves                     SavedPost[]
+  followingRel              Follow[]             @relation("UserFollowing")
+  followersRel              Follow[]             @relation("UserFollowers")
+  notifications             Notification[]       @relation("UserNotifications")
+  notifiedActions           Notification[]       @relation("UserNotificationActors")
+  aiChats                   AIChat[]
+  nativeSessions            NativeSession[]
+  accessRole                AccessRole           @default(USER)
+  emailVerificationRequired Boolean              @default(false)
+  hiddenAt                  DateTime?
+  deletionScheduledAt       DateTime?
+  notificationDevices       DeviceRegistration[]
+  notifyFollows             Boolean              @default(true)
+  notifyLikes               Boolean              @default(true)
+  notifyComments            Boolean              @default(true)
+  notifyMessages            Boolean              @default(true)
+  notifySocial              Boolean              @default(true)
+  pushEnabled               Boolean              @default(true)
+  pushPreview               Boolean              @default(false)
+  discoverable              Boolean              @default(true)
+  showPosts                 Boolean              @default(true)
+  showCollections           Boolean              @default(true)
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
+  followers                 BigInt               @default(0)
+  following                 BigInt               @default(0)
+}
+
+enum AccessRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  ACTIONED
+  DISMISSED
+  APPEALED
+}
+
+model NativeSession {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique
+  familyId         String
+  deviceName       String?
+  userAgent        String?
+  expiresAt        DateTime
+  lastUsedAt       DateTime  @default(now())
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+  @@index([expiresAt])
+}
+
+model AuthToken {
+  id        String    @id @default(cuid())
+  userId    String
+  kind      String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, kind])
+  @@index([expiresAt])
+}
+
+model OAuthAttempt {
+  id          String    @id @default(cuid())
+  stateHash   String    @unique
+  provider    String
+  redirectUri String
+  verifier    String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
+model DeviceRegistration {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expoToken    String   @unique
+  platform     String
+  appVersion   String
+  locale       String   @default("en")
+  enabled      Boolean  @default(true)
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, enabled])
+}
+
+model IdempotencyRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  key         String
+  operation   String
+  requestHash String
+  statusCode  Int
+  response    Json
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, key, operation])
+  @@index([expiresAt])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+model Report {
+  id           String       @id @default(cuid())
+  reporterId   String
+  targetType   String
+  targetId     String
+  reason       String
+  description  String?
+  evidence     Json
+  status       ReportStatus @default(OPEN)
+  assignedToId String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+  @@index([reporterId])
+}
+
+model ModerationAction {
+  id          String   @id @default(cuid())
+  reportId    String?
+  moderatorId String
+  action      String
+  targetType  String
+  targetId    String
+  reason      String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([reportId])
+  @@index([moderatorId, createdAt])
+}
+
+model ConsentRecord {
+  id         String   @id @default(cuid())
+  userId     String
+  document   String
+  version    String
+  acceptedAt DateTime @default(now())
+
+  @@unique([userId, document, version])
+}
+
+model NotificationOutbox {
+  id          String    @id @default(cuid())
+  userId      String
+  eventType   String
+  payload     Json
+  dedupeKey   String    @unique
+  attempts    Int       @default(0)
+  availableAt DateTime  @default(now())
+  deliveredAt DateTime?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([deliveredAt, availableAt])
+}
+
+model PushReceipt {
+  id        String    @id @default(cuid())
+  outboxId  String
+  deviceId  String
+  ticketId  String?
+  status    String
+  errorCode String?
+  checkedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([outboxId, deviceId])
+  @@index([ticketId])
 }
 
 model Collection {
-  id          String   @id @default(cuid())
-  title       String
-  description String   @default("")
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tools       Tool[]
-  showcased  Boolean  @default(false)
+  id             String   @id @default(cuid())
+  title          String
+  description    String   @default("")
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tools          Tool[]
+  showcased      Boolean  @default(false)
   importedFromId String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  @@index([userId])
   @@unique([userId, importedFromId])
+  @@index([userId])
 }
 
 model Tool {
@@ -183,20 +364,20 @@ model Account {
 }
 
 model Session {
-  sessionToken String @id
+  sessionToken String   @id
   userId       String
   expires      DateTime
-  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AIChat {
-  id        String         @id @default(cuid())
+  id        String          @id @default(cuid())
   userId    String
-  title     String         @default("New chat")
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String          @default("New chat")
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages  AIChatMessage[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
   @@index([userId, updatedAt])
 }

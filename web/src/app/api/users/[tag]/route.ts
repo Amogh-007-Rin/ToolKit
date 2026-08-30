@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { resolveStoredUrl } from "@/lib/storage";
+import { usersBlockEachOther } from "@/lib/blocks";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ tag: string }> }) {
   const userId = await getSessionUserId();
@@ -38,6 +39,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ tag: st
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
+  if (user.id !== userId && await usersBlockEachOther(userId, user.id)) return NextResponse.json({ code: "BLOCKED", error: "Profile unavailable" }, { status: 403 });
 
   const followedByMe =
     user.id !== userId

@@ -2,18 +2,20 @@ import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { resolveStoredUrl } from "@/lib/storage";
+import { blockedUserIds } from "@/lib/blocks";
 
 export async function GET() {
   const userId = await getSessionUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const excludedIds = [userId, ...await blockedUserIds(userId)];
 
   const [posts, collections, creators] = await Promise.all([
     prisma.post.findMany({
       where: {
-        userId: { not: userId },
-        user: { discoverable: true, showPosts: true },
+        userId: { notIn: excludedIds },
+        user: { discoverable: true, showPosts: true, hiddenAt: null },
       },
       include: {
         media: { orderBy: { order: "asc" } },
@@ -28,8 +30,8 @@ export async function GET() {
     prisma.collection.findMany({
       where: {
         showcased: true,
-        userId: { not: userId },
-        user: { discoverable: true, showCollections: true },
+        userId: { notIn: excludedIds },
+        user: { discoverable: true, showCollections: true, hiddenAt: null },
       },
       include: {
         tools: {
@@ -42,7 +44,7 @@ export async function GET() {
       take: 16,
     }),
     prisma.user.findMany({
-      where: { id: { not: userId }, discoverable: true },
+      where: { id: { notIn: excludedIds }, discoverable: true, hiddenAt: null },
       select: {
         id: true,
         name: true,

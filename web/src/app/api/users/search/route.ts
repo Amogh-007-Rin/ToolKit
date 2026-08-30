@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { resolveStoredUrl } from "@/lib/storage";
+import { blockedUserIds } from "@/lib/blocks";
 
 export async function GET(req: Request) {
   const userId = await getSessionUserId();
@@ -11,11 +12,13 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
+  const excludedIds = [userId, ...await blockedUserIds(userId)];
 
   const users = await prisma.user.findMany({
     where: {
-      NOT: { id: userId },
+      id: { notIn: excludedIds },
       discoverable: true,
+      hiddenAt: null,
       ...(q
         ? {
             OR: [

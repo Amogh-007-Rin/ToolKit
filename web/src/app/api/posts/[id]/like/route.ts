@@ -36,6 +36,11 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       await tx.notification.create({
         data: { userId: post.userId, actorId: userId, postId: id, type: "like" },
       });
+      await tx.notificationOutbox.upsert({
+        where: { dedupeKey: `like:${id}:${userId}` },
+        create: { userId: post.userId, eventType: "like", payload: { postId: id, actorId: userId, summary: "Someone liked your post" }, dedupeKey: `like:${id}:${userId}` },
+        update: { deliveredAt: null, attempts: 0, availableAt: new Date(), lastError: null },
+      });
     }
   });
 

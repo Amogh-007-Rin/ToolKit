@@ -10,6 +10,16 @@ import {
   resolveStoredUrl,
 } from "@/lib/storage";
 import type { Prisma } from "../../../../../generated/prisma/client";
+import { usersBlockEachOther } from "@/lib/blocks";
+
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id } = await params;
+  const post = await prisma.post.findUnique({ where: { id }, include: { media: { orderBy: { order: "asc" } }, user: { select: { id: true, name: true, image: true, tag: true, showPosts: true, hiddenAt: true } }, _count: { select: { likes: true, comments: true, saves: true } }, likes: { where: { userId }, select: { id: true } }, saves: { where: { userId }, select: { id: true } } } });
+  if (!post || post.user.hiddenAt || (post.userId !== userId && !post.user.showPosts) || (post.userId !== userId && await usersBlockEachOther(userId, post.userId))) return NextResponse.json({ error: "Post not found" }, { status: 404 });
+  return NextResponse.json({ post: { id: post.id, caption: post.caption, tags: post.tags, createdAt: post.createdAt.toISOString(), author: { id: post.user.id, name: post.user.name, tag: post.user.tag, image: await resolveStoredUrl(post.user.image) }, media: await Promise.all(post.media.map(async (item) => ({ id: item.id, type: item.type, url: await resolveStoredUrl(item.url) }))), likeCount: post._count.likes, commentCount: post._count.comments, savedCount: post._count.saves, likedByMe: post.likes.length > 0, savedByMe: post.saves.length > 0, mine: post.userId === userId } });
+}
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();

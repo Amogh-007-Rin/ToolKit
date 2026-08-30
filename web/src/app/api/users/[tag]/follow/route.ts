@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
+import { usersBlockEachOther } from "@/lib/blocks";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ tag: string }> }) {
   const userId = await getSessionUserId();
@@ -22,6 +23,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ tag: s
   if (target.id === userId) {
     return NextResponse.json({ error: "You cannot follow yourself" }, { status: 400 });
   }
+  if (await usersBlockEachOther(userId, target.id)) return NextResponse.json({ code: "BLOCKED", error: "Follow unavailable" }, { status: 403 });
 
   const followed = await prisma.$transaction(async (tx) => {
     const existing = await tx.follow.findUnique({
@@ -59,7 +61,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ tag: s
         data: { following: { increment: 1 } },
       }),
       ...(target.notifyFollows
-        ? [tx.notification.create({ data: { userId: target.id, actorId: userId, type: "follow" } })]
+        ? [
+            tx.notification.create({ data: { userId: target.id, actorId: userId, type: "follow" } }),
+            tx.notificationOutbox.upsert({ where: { dedupeKey: `follow:${target.id}:${userId}` }, create: { userId: target.id, eventType: "follow", payload: { actorId: userId, summary: "Someone followed you" }, dedupeKey: `follow:${target.id}:${userId}` }, update: { deliveredAt: null, attempts: 0, availableAt: new Date(), lastError: null } }),
+          ]
         : []),
     ]);
     return true;

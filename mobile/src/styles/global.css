@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-background: 242 240 237;
+    --color-foreground: 41 45 50;
+    --color-card: 255 255 255;
+    --color-sidebar: 255 255 255;
+    --color-muted: 241 240 236;
+    --color-muted-foreground: 111 106 135;
+    --color-primary: 237 75 75;
+    --color-border: 228 226 223;
+    --color-input: 241 240 236;
+    --color-destructive: 244 105 106;
+  }
+
+  .dark {
+    --color-background: 0 0 0;
+    --color-foreground: 255 255 255;
+    --color-card: 29 29 29;
+    --color-sidebar: 29 29 29;
+    --color-muted: 37 37 37;
+    --color-muted-foreground: 111 106 135;
+    --color-primary: 237 75 75;
+    --color-border: 42 42 42;
+    --color-input: 37 37 37;
+    --color-destructive: 255 107 107;
+  }
+}

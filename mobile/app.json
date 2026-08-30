@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "ToolKit",
+    "slug": "toolkit-mobile",
+    "version": "0.1.0",
+    "scheme": "toolkit",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "ToolKit uses the camera only when you choose to capture post or message media.",
+        "NSPhotoLibraryUsageDescription": "ToolKit accesses selected photos and videos for posts, profiles, and messages.",
+        "NSFaceIDUsageDescription": "ToolKit can use Face ID to lock the app when you enable biometric lock."
+      }
+    },
+    "android": {
+      "predictiveBackGestureEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-sqlite",
+      "expo-sharing"
+      ,"expo-notifications"
+      ,"expo-local-authentication"
+      ,["expo-camera", { "cameraPermission": "Allow ToolKit to capture media you choose to share." }]
+      ,["expo-image-picker", { "photosPermission": "Allow ToolKit to select photos and videos you choose to share." }]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "http://127.0.0.1:3000/api/v1",
+      "messageServiceUrl": "http://127.0.0.1:8080"
+      ,"easProjectId": "00000000-0000-0000-0000-000000000000"
+    }
+  }
+}

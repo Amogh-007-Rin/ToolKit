@@ -1,0 +1,131 @@
+openapi: 3.1.0
+info:
+  title: ToolKit Mobile API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Credentials' }
+      responses:
+        '200':
+          description: Native session created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthPayload' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '429': { $ref: '#/components/responses/RateLimitError' }
+  /auth/register:
+    post:
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/Credentials'
+                - type: object
+                  required: [name]
+                  properties: { name: { type: string, minLength: 1, maxLength: 80 } }
+      responses:
+        '201':
+          description: Account and native session created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthPayload' }
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /auth/refresh:
+    post:
+      operationId: refresh
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '200':
+          description: Rotated session; the submitted refresh token is now invalid
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthPayload' }
+        '401': { $ref: '#/components/responses/AuthError' }
+  /auth/logout:
+    post:
+      operationId: logout
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '204': { description: Session revoked or already absent }
+components:
+  schemas:
+    Credentials:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8, maxLength: 128 }
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required: [refreshToken]
+      properties: { refreshToken: { type: string, maxLength: 500 } }
+    User:
+      type: object
+      required: [id, email, name, image, tag]
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        name: { type: [string, 'null'] }
+        image: { type: [string, 'null'] }
+        tag: { type: [string, 'null'] }
+    AuthPayload:
+      type: object
+      required: [accessToken, refreshToken, expiresIn, user]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        expiresIn: { type: integer, const: 900 }
+        user: { $ref: '#/components/schemas/User' }
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    AuthError:
+      description: Authentication failed or expired
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    RateLimitError:
+      description: Too many requests
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []

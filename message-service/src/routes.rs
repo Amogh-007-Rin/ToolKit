@@ -76,7 +76,10 @@ async fn list_rooms(
 ) -> Result<Json<Value>, AppError> {
     let user_id = current_user(State(state.clone()), headers, Query(token_query)).await?;
 
-    let rows = db::list_rooms(&state.db, &user_id).await?;
+    let mut rows = db::list_rooms(&state.db, &user_id).await?;
+    let mut visible = Vec::with_capacity(rows.len());
+    for row in rows.drain(..) { if !db::room_blocked_for_user(&state.db, &row.id, &user_id).await? { visible.push(row); } }
+    let rows = visible;
     let room_ids: Vec<String> = rows.iter().map(|row| row.id.clone()).collect();
     let member_rows = db::room_members_for_rooms(&state.db, &room_ids).await?;
     let mut members_by_room: HashMap<String, Vec<String>> = HashMap::new();
@@ -152,6 +155,7 @@ async fn create_direct_room(
             "cannot open a direct room with yourself".to_string(),
         ));
     }
+    if db::users_blocked(&state.db, &user_id, &other).await? { return Err(AppError::BadRequest("blocked users cannot start a conversation".to_string())); }
 
     let room = db::find_or_create_direct_room(&state.db, &user_id, &other).await?;
     let members = db::room_member_ids(&state.db, &room.id).await?;
@@ -173,7 +177,7 @@ async fn room_messages(
 ) -> Result<Json<Value>, AppError> {
     let user_id = current_user(State(state.clone()), headers, Query(token_query)).await?;
 
-    if !db::is_member(&state.db, &room_id, &user_id).await? {
+    if !db::is_member(&state.db, &room_id, &user_id).await? || db::room_blocked_for_user(&state.db, &room_id, &user_id).await? {
         return Err(AppError::NotFound("room not found".to_string()));
     }
 
@@ -195,7 +199,7 @@ async fn mark_read(
 ) -> Result<Json<Value>, AppError> {
     let user_id = current_user(State(state.clone()), headers, Query(token_query)).await?;
 
-    if !db::is_member(&state.db, &room_id, &user_id).await? {
+    if !db::is_member(&state.db, &room_id, &user_id).await? || db::room_blocked_for_user(&state.db, &room_id, &user_id).await? {
         return Err(AppError::NotFound("room not found".to_string()));
     }
 

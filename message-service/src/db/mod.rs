@@ -8,6 +8,7 @@ use sqlx::PgPool;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::types::Json;
 use std::str::FromStr;
+use uuid::Uuid;
 
 const SCHEMA: &str = "messaging";
 
@@ -34,6 +35,18 @@ pub async fn is_member(pool: &PgPool, room_id: &str, user_id: &str) -> Result<bo
     .fetch_one(pool)
     .await?;
     Ok(exists)
+}
+
+pub async fn users_blocked(pool: &PgPool, user_a: &str, user_b: &str) -> Result<bool, AppError> {
+    let blocked: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM public.\"Block\" WHERE (\"blockerId\"=$1 AND \"blockedId\"=$2) OR (\"blockerId\"=$2 AND \"blockedId\"=$1))")
+        .bind(user_a).bind(user_b).fetch_one(pool).await?;
+    Ok(blocked)
+}
+
+pub async fn room_blocked_for_user(pool: &PgPool, room_id: &str, user_id: &str) -> Result<bool, AppError> {
+    let blocked: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM room_members rm JOIN public.\"Block\" b ON ((b.\"blockerId\"=$2 AND b.\"blockedId\"=rm.user_id) OR (b.\"blockedId\"=$2 AND b.\"blockerId\"=rm.user_id)) WHERE rm.room_id=$1 AND rm.user_id<>$2)")
+        .bind(room_id).bind(user_id).fetch_one(pool).await?;
+    Ok(blocked)
 }
 
 pub async fn find_or_create_direct_room(
@@ -158,6 +171,7 @@ pub async fn insert_message(
     content: &str,
     attachments: &[models::Attachment],
 ) -> Result<Message, AppError> {
+    let mut tx = pool.begin().await?;
     let message = sqlx::query_as::<_, Message>(
         "INSERT INTO messages (id, room_id, sender_id, content, attachments)
          VALUES ($1, $2, $3, $4, $5)
@@ -169,8 +183,18 @@ pub async fn insert_message(
     .bind(sender_id)
     .bind(content)
     .bind(Json(attachments))
-    .fetch_one(pool)
+    .fetch_one(&mut *tx)
     .await?;
+    let recipients: Vec<String> = sqlx::query_scalar("SELECT user_id FROM room_members WHERE room_id = $1 AND user_id <> $2")
+        .bind(room_id).bind(sender_id).fetch_all(&mut *tx).await?;
+    for recipient in recipients {
+        let outbox_id = Uuid::new_v4().to_string();
+        let payload = serde_json::json!({ "roomId": room_id, "messageId": id, "senderId": sender_id, "summary": "New message" });
+        sqlx::query("INSERT INTO public.\"NotificationOutbox\" (id, \"userId\", \"eventType\", payload, \"dedupeKey\", attempts, \"availableAt\", \"createdAt\") VALUES ($1, $2, 'message', $3, $4, 0, NOW(), NOW()) ON CONFLICT (\"dedupeKey\") DO NOTHING")
+            .bind(outbox_id).bind(recipient).bind(payload).bind(format!("message:{id}"))
+            .execute(&mut *tx).await?;
+    }
+    tx.commit().await?;
     Ok(message)
 }
 

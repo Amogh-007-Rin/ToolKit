@@ -30,10 +30,14 @@ pub async fn authenticate(
     query: Query<TokenQuery>,
     secret: &str,
 ) -> Result<String, AppError> {
-    let token = extract_token(&headers, &query).ok_or_else(|| {
+    let header_token = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer ").or_else(|| value.strip_prefix("bearer ")));
+    let token = header_token.or(query.token.as_deref()).ok_or_else(|| {
         AppError::Auth("missing bearer token or token query parameter".to_string())
     })?;
-    let claims = jwt::verify_token(&token, secret)?;
+    let claims = if header_token.is_some() { jwt::verify_token(token, secret)? } else { jwt::verify_realtime_ticket(token, secret)? };
     let user_id = jwt::user_id_from_claims(&claims)
         .ok_or_else(|| AppError::Auth("token does not contain a user id".to_string()))?;
     if user_id.is_empty() || user_id.len() > 100 {

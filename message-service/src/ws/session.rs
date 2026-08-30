@@ -148,7 +148,7 @@ async fn handle_client_event(state: &AppState, conn_id: ConnId, text: &str) {
                 return;
             }
             match db::is_member(&state.db, &room_id, &user_id).await {
-                Ok(true) => {
+                Ok(true) if !db::room_blocked_for_user(&state.db, &room_id, &user_id).await.unwrap_or(true) => {
                     let is_first_room = state
                         .sessions
                         .get(&conn_id)
@@ -179,6 +179,7 @@ async fn handle_client_event(state: &AppState, conn_id: ConnId, text: &str) {
                         "you are not a member of this room".to_string(),
                     );
                 }
+                Ok(true) => send_error(state, conn_id, "blocked", "room unavailable because of a block".to_string()),
                 Err(error) => {
                     send_error(state, conn_id, "database_error", error.to_string());
                 }
@@ -232,6 +233,7 @@ async fn handle_typing(
             return;
         }
     }
+    if db::room_blocked_for_user(&state.db, &room_id, user_id).await.unwrap_or(true) { return; }
     let event = if typing {
         ServerEvent::TypingStart {
             room_id: room_id.clone(),
@@ -342,6 +344,10 @@ async fn handle_send_message(
             );
             return;
         }
+    }
+    if db::room_blocked_for_user(&state.db, &room_id, user_id).await.unwrap_or(true) {
+        ack_failure(state, conn_id, &room_id, temp_id.as_deref(), "message blocked");
+        return;
     }
 
     match db::insert_message(

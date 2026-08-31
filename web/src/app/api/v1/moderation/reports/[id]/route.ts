@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const schema = z.object({
   status: z.enum(["REVIEWING", "ACTIONED", "DISMISSED", "APPEALED"]),
-  action: z.enum(["review", "warn", "remove", "suspend", "dismiss"]),
+  action: z.enum(["review", "warn", "remove", "suspend", "reinstate", "dismiss"]),
   reason: z.string().trim().min(3).max(1000),
   confirmation: z.literal("CONFIRM").optional(),
 });
@@ -15,12 +15,31 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (!moderator) return apiError(req, 403, "FORBIDDEN", "Moderator access required");
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return apiError(req, 400, "VALIDATION_FAILED", "Invalid moderation action");
-  if (["remove", "suspend"].includes(parsed.data.action) && parsed.data.confirmation !== "CONFIRM") return apiError(req, 409, "CONFIRMATION_REQUIRED", "Elevated confirmation required");
+  if (["remove", "suspend", "reinstate"].includes(parsed.data.action) && parsed.data.confirmation !== "CONFIRM") return apiError(req, 409, "CONFIRMATION_REQUIRED", "Elevated confirmation required");
   const { id } = await context.params;
   const report = await prisma.report.findUnique({ where: { id } });
   if (!report) return apiError(req, 404, "NOT_FOUND", "Report not found");
   const updated = await prisma.$transaction(async (tx) => {
     await tx.moderationAction.create({ data: { reportId: id, moderatorId: moderator.id, action: parsed.data.action, targetType: report.targetType, targetId: report.targetId, reason: parsed.data.reason } });
+    if (parsed.data.action === "remove") {
+      if (report.targetType === "post") await tx.post.deleteMany({ where: { id: report.targetId } });
+      if (report.targetType === "comment") await tx.comment.deleteMany({ where: { id: report.targetId } });
+      if (report.targetType === "message") {
+        await tx.$executeRawUnsafe(`UPDATE messaging.messages SET deleted_at = NOW(), content = '', attachments = '[]'::jsonb WHERE id = $1`, report.targetId);
+      }
+    }
+    if (parsed.data.action === "suspend" && report.targetType === "profile") {
+      await tx.user.updateMany({ where: { id: report.targetId }, data: { suspendedAt: new Date(), suspensionReason: parsed.data.reason } });
+      await tx.session.deleteMany({ where: { userId: report.targetId } });
+      await tx.deviceRegistration.updateMany({ where: { userId: report.targetId }, data: { enabled: false } });
+    }
+    if (parsed.data.action === "reinstate" && report.targetType === "appeal") {
+      const original = await tx.moderationAction.findUnique({ where: { id: report.targetId } });
+      if (original?.targetType === "profile") {
+        await tx.user.updateMany({ where: { id: original.targetId }, data: { suspendedAt: null, suspensionReason: null } });
+        await tx.deviceRegistration.updateMany({ where: { userId: original.targetId }, data: { enabled: true } });
+      }
+    }
     return tx.report.update({ where: { id }, data: { status: parsed.data.status, assignedToId: moderator.id } });
   });
   return apiJson(req, { report: updated });

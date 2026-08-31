@@ -10,6 +10,9 @@ pub struct Config {
     pub jwt_secret: String,
     pub log_level: String,
     pub cors_origin: Option<String>,
+    pub blocked_terms: Vec<String>,
+    pub max_content_links: usize,
+    pub message_rate_limit_per_minute: u32,
 }
 
 impl Config {
@@ -32,6 +35,21 @@ impl Config {
             jwt_secret,
             log_level: env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string()),
             cors_origin: env::var("CORS_ORIGIN").ok(),
+            blocked_terms: env::var("CONTENT_BLOCKED_TERMS")
+                .unwrap_or_default()
+                .split(',')
+                .map(|term| term.trim().to_lowercase())
+                .filter(|term| term.len() >= 2)
+                .take(500)
+                .collect(),
+            max_content_links: env::var("CONTENT_MAX_LINKS")
+                .ok()
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(4),
+            message_rate_limit_per_minute: env::var("MESSAGE_RATE_LIMIT_PER_MINUTE")
+                .ok()
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(30),
         })
     }
 }

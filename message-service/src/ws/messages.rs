@@ -7,14 +7,50 @@ pub const MAX_ATTACHMENTS: usize = 10;
 pub const MAX_ATTACHMENT_KEY_LEN: usize = 500;
 pub const MAX_ATTACHMENT_NAME_LEN: usize = 255;
 
+pub fn content_policy_allows(content: &str, blocked_terms: &[String], max_links: usize) -> bool {
+    let normalized = content.to_lowercase();
+    if blocked_terms.iter().any(|term| {
+        normalized
+            .split(|character: char| !character.is_alphanumeric())
+            .any(|word| word == term)
+            || (term.contains(' ') && normalized.contains(term))
+    }) {
+        return false;
+    }
+    let links = normalized.matches("http://").count()
+        + normalized.matches("https://").count()
+        + normalized.matches("www.").count();
+    if links > max_links {
+        return false;
+    }
+    let mut previous = None;
+    let mut repeated = 0;
+    for character in normalized.chars() {
+        if previous == Some(character) {
+            repeated += 1;
+            if repeated >= 11 {
+                return false;
+            }
+        } else {
+            repeated = 0;
+            previous = Some(character);
+        }
+    }
+    true
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum ClientEvent {
     Heartbeat,
     #[serde(rename_all = "camelCase")]
-    JoinRoom { room_id: String },
+    JoinRoom {
+        room_id: String,
+    },
     #[serde(rename_all = "camelCase")]
-    LeaveRoom { room_id: String },
+    LeaveRoom {
+        room_id: String,
+    },
     #[serde(rename_all = "camelCase")]
     SendMessage {
         room_id: String,
@@ -25,9 +61,13 @@ pub enum ClientEvent {
         attachments: Vec<Attachment>,
     },
     #[serde(rename_all = "camelCase")]
-    TypingStart { room_id: String },
+    TypingStart {
+        room_id: String,
+    },
     #[serde(rename_all = "camelCase")]
-    TypingStop { room_id: String },
+    TypingStop {
+        room_id: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,5 +152,21 @@ mod tests {
             .exclude_user(),
             None
         );
+    }
+
+    #[test]
+    fn enforces_local_configurable_content_policy() {
+        assert!(!content_policy_allows(
+            "contains blockedword",
+            &["blockedword".into()],
+            4
+        ));
+        assert!(!content_policy_allows(
+            "https://a.dev https://b.dev",
+            &[],
+            1
+        ));
+        assert!(!content_policy_allows("aaaaaaaaaaaa", &[], 4));
+        assert!(content_policy_allows("ordinary private message", &[], 4));
     }
 }

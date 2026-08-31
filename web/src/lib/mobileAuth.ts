@@ -147,15 +147,24 @@ export async function listNativeSessions(userId: string) {
 }
 
 export async function createRealtimeTicket(userId: string): Promise<string> {
-  return new SignJWT({ scope: "realtime:connect" })
+  const jti = randomUUID();
+  const expiresAt = new Date(Date.now() + 60_000);
+  const ticket = await new SignJWT({ scope: "realtime:connect" })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(userId)
     .setIssuer(TOKEN_ISSUER)
     .setAudience("toolkit-realtime")
     .setIssuedAt()
-    .setExpirationTime("60s")
-    .setJti(randomUUID())
+    .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
+    .setJti(jti)
     .sign(signingKey());
+  await prisma.$transaction([
+    prisma.realtimeTicket.deleteMany({ where: { expiresAt: { lt: new Date() } } }),
+    prisma.realtimeTicket.create({
+      data: { userId, jtiHash: createHash("sha256").update(jti).digest("hex"), expiresAt },
+    }),
+  ]);
+  return ticket;
 }
 
 export async function verifyNativeAccessToken(token: string): Promise<string | null> {

@@ -14,7 +14,8 @@ pub async fn ws_handler(
     headers: HeaderMap,
     ws: WebSocketUpgrade,
 ) -> Result<Response, AppError> {
-    let user_id = auth::authenticate(headers, Query(query), &state.config.jwt_secret).await?;
+    let user_id =
+        auth::authenticate(headers, Query(query), &state.config.jwt_secret, &state.db).await?;
     let conn_id: ConnId = Uuid::new_v4();
     Ok(ws.on_upgrade(move |socket| async move {
         session::run(state, socket, conn_id, user_id).await;

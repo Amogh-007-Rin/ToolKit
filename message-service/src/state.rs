@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use dashmap::{DashMap, DashSet};
 use sqlx::PgPool;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tokio::sync::{broadcast, mpsc};
 use uuid::Uuid;
 
@@ -34,7 +35,13 @@ pub struct AppState {
     pub sessions: Arc<DashMap<ConnId, Session>>,
     pub room_connections: Arc<DashMap<RoomId, DashSet<ConnId>>>,
     pub last_seen: Arc<DashMap<UserId, DateTime<Utc>>>,
+    message_limits: Arc<DashMap<UserId, MessageRateWindow>>,
     shutdown_tx: broadcast::Sender<()>,
+}
+
+struct MessageRateWindow {
+    count: u32,
+    reset_at: Instant,
 }
 
 impl AppState {
@@ -47,8 +54,30 @@ impl AppState {
             sessions: Arc::new(DashMap::new()),
             room_connections: Arc::new(DashMap::new()),
             last_seen: Arc::new(DashMap::new()),
+            message_limits: Arc::new(DashMap::new()),
             shutdown_tx,
         }
+    }
+
+    pub fn allow_message(&self, user_id: &str) -> bool {
+        let now = Instant::now();
+        let limit = self.config.message_rate_limit_per_minute;
+        let mut entry =
+            self.message_limits
+                .entry(user_id.to_string())
+                .or_insert(MessageRateWindow {
+                    count: 0,
+                    reset_at: now + Duration::from_secs(60),
+                });
+        if entry.reset_at <= now {
+            entry.count = 0;
+            entry.reset_at = now + Duration::from_secs(60);
+        }
+        if entry.count >= limit {
+            return false;
+        }
+        entry.count += 1;
+        true
     }
 
     pub fn shutdown_rx(&self) -> broadcast::Receiver<()> {

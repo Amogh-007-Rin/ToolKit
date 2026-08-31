@@ -7,6 +7,10 @@ describe("mobile link contract", () => {
     expect(parseAppLink("toolkit://profile/alice")).toEqual({ kind: "profile", tag: "alice" });
     expect(parseAppLink("https://toolkit.example/posts/post_12")).toEqual({ kind: "post", id: "post_12" });
     expect(parseAppLink("toolkit://oauth/callback?code=secret")).toEqual({ kind: "oauthCallback" });
+    expect(parseAppLink("toolkit://conversations/room_12")).toEqual({ kind: "conversation", id: "room_12" });
+    expect(parseAppLink("toolkit://notifications/notice_1")).toEqual({ kind: "notification", id: "notice_1" });
+    expect(parseAppLink("https://toolkit.example/reset-password?token=reset_1")).toEqual({ kind: "resetPassword", token: "reset_1" });
+    expect(parseAppLink("toolkit://account/restore")).toEqual({ kind: "restoreAccount" });
   });
 
   test("rejects unknown, malformed, and unsafe links", () => {

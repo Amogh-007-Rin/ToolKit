@@ -26,19 +26,20 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-sqlite",
-      "expo-sharing"
-      ,"expo-notifications"
-      ,"expo-local-authentication"
-      ,["expo-camera", { "cameraPermission": "Allow ToolKit to capture media you choose to share." }]
-      ,["expo-image-picker", { "photosPermission": "Allow ToolKit to select photos and videos you choose to share." }]
+      "expo-sharing",
+      "expo-notifications",
+      "expo-local-authentication",
+      "expo-video",
+      ["expo-camera", { "cameraPermission": "Allow ToolKit to capture media you choose to share." }],
+      ["expo-image-picker", { "photosPermission": "Allow ToolKit to select photos and videos you choose to share." }]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "apiUrl": "http://127.0.0.1:3000/api/v1",
-      "messageServiceUrl": "http://127.0.0.1:8080"
-      ,"easProjectId": "00000000-0000-0000-0000-000000000000"
+      "messageServiceUrl": "http://127.0.0.1:8080",
+      "easProjectId": "00000000-0000-0000-0000-000000000000"
     }
   }
 }

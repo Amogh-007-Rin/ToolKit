@@ -52,11 +52,12 @@ export async function queuedMutations(): Promise<QueuedMutation[]> {
     created_at AS createdAt, next_attempt_at AS nextAttemptAt FROM mutation_queue ORDER BY created_at`);
 }
 
-export async function processMutationQueue(execute: (item: QueuedMutation) => Promise<void>) {
+export async function processMutationQueue(execute: (item: QueuedMutation) => Promise<void>, shouldProcess: (item: QueuedMutation) => boolean = () => true) {
   const store = await db();
   const ready = await store.getAllAsync<QueuedMutation>(`SELECT id, operation, path, method, body, attempts, status, error,
     created_at AS createdAt, next_attempt_at AS nextAttemptAt FROM mutation_queue WHERE status != 'running' AND next_attempt_at <= ? ORDER BY created_at LIMIT 25`, Date.now());
   for (const item of ready) {
+    if (!shouldProcess(item)) continue;
     await store.runAsync("UPDATE mutation_queue SET status = 'running' WHERE id = ?", item.id);
     try {
       await execute(item);
@@ -75,4 +76,22 @@ export async function discardMutation(id: string) {
 
 export async function retryMutation(id: string) {
   await (await db()).runAsync("UPDATE mutation_queue SET status = 'pending', error = NULL, next_attempt_at = ? WHERE id = ?", Date.now(), id);
+}
+
+export async function failMutation(id: string, error: string) {
+  await (await db()).runAsync(
+    "UPDATE mutation_queue SET status = 'failed', error = ?, attempts = attempts + 1, next_attempt_at = ? WHERE id = ?",
+    error.slice(0, 500),
+    Date.now(),
+    id,
+  );
+}
+
+export async function setMutationPayload(id: string, body: string) {
+  await (await db()).runAsync(
+    "UPDATE mutation_queue SET body = ?, status = 'pending', error = NULL, attempts = 0, next_attempt_at = ? WHERE id = ?",
+    body,
+    Date.now(),
+    id,
+  );
 }

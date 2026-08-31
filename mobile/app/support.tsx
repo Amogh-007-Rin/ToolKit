@@ -1,0 +1,7 @@
+import { Linking, Pressable, Text, View } from "react-native";
+import { LifeBuoy, Mail, ShieldAlert } from "lucide-react-native";
+import { Screen } from "@/components/Screen";
+import { config } from "@/lib/config";
+
+const supportEmail = process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? "support@example.com";
+export default function SupportScreen() { return <Screen title="Support" subtitle="Help with account access, privacy, safety, or technical problems."><View className="gap-3 rounded-3xl border border-border bg-card p-5"><LifeBuoy color="#ed4b4b" size={26} /><Text className="text-lg font-bold text-foreground">Before contacting support</Text><Text className="leading-6 text-muted-foreground">Never send passwords, access tokens, refresh tokens, or private message content. Include your ToolKit tag and a concise description.</Text></View><Pressable accessibilityRole="link" onPress={() => void Linking.openURL(`mailto:${supportEmail}?subject=ToolKit%20support`)} className="min-h-14 flex-row items-center justify-center gap-3 rounded-2xl bg-primary"><Mail color="white" size={20} /><Text className="font-bold text-white">Email {supportEmail}</Text></Pressable><Pressable accessibilityRole="link" onPress={() => void Linking.openURL(`${config.serverUrl}/contact`)} className="min-h-14 flex-row items-center justify-center gap-3 rounded-2xl border border-border"><ShieldAlert color="#ed4b4b" size={20} /><Text className="font-bold text-foreground">Support and safety guidance</Text></Pressable></Screen>; }

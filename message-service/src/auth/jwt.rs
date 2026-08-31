@@ -3,9 +3,9 @@ use aes_gcm::aead::{Aead, Payload};
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use base64::Engine as _;
 use hkdf::Hkdf;
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 
 const NEXT_AUTH_JWE_INFO: &[u8] = b"NextAuth.js Generated Encryption Key";
 const CLOCK_TOLERANCE_SECS: i64 = 15;
@@ -99,7 +99,9 @@ pub fn verify_token(token: &str, secret: &str) -> Result<Claims, AppError> {
 
 pub fn verify_realtime_ticket(token: &str, secret: &str) -> Result<Claims, AppError> {
     let claims = verify_signed_token(token, secret, "toolkit-realtime")?;
-    if claims.scope.as_deref() != Some("realtime:connect") || claims.jti.as_deref().unwrap_or_default().is_empty() {
+    if claims.scope.as_deref() != Some("realtime:connect")
+        || claims.jti.as_deref().unwrap_or_default().is_empty()
+    {
         return Err(AppError::Auth("ticket has invalid scope".into()));
     }
     Ok(claims)
@@ -110,9 +112,13 @@ fn verify_signed_token(token: &str, secret: &str, audience: &str) -> Result<Clai
     validation.set_issuer(&["toolkit-web"]);
     validation.set_audience(&[audience]);
     validation.leeway = CLOCK_TOLERANCE_SECS as u64;
-    decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &validation)
-        .map(|data| data.claims)
-        .map_err(|_| AppError::Auth("invalid or expired signed token".into()))
+    decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &validation,
+    )
+    .map(|data| data.claims)
+    .map_err(|_| AppError::Auth("invalid or expired signed token".into()))
 }
 
 pub fn user_id_from_claims(claims: &Claims) -> Option<String> {

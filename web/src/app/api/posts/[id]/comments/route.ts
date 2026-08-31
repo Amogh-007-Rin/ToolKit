@@ -3,6 +3,7 @@ import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { commentCreateSchema } from "@/types/validation";
 import { resolveStoredUrl } from "@/lib/storage";
+import { checkContentPolicy } from "@/lib/contentSafety";
 
 const COMMENT_USER_SELECT = {
   id: true,
@@ -56,6 +57,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       { status: 400 }
     );
   }
+  const policy = checkContentPolicy(parsed.data.content);
+  if (!policy.allowed) return NextResponse.json({ code: policy.code, error: policy.message }, { status: 422 });
 
   const post = await prisma.post.findUnique({
     where: { id },

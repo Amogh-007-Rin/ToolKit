@@ -2,6 +2,7 @@ import { config } from "@/lib/config";
 import { ApiError } from "@/lib/query";
 import { useSessionStore } from "@/store/session";
 import { clientId } from "@/lib/ids";
+import { discardMutation, enqueueMutation } from "@/lib/offlineQueue";
 
 interface ErrorBody {
   code?: string;
@@ -11,6 +12,26 @@ interface ErrorBody {
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return request<T>(path, init, true);
+}
+
+export async function queueableApi<T>(operation: string, path: string, init: RequestInit): Promise<T> {
+  const method = init.method?.toUpperCase() ?? "POST";
+  const body = typeof init.body === "string" ? init.body : null;
+  const queueId = await enqueueMutation({ operation, path, method, body });
+  try {
+    const result = await api<T>(path, {
+      ...init,
+      headers: { ...Object.fromEntries(new Headers(init.headers).entries()), "Idempotency-Key": queueId },
+    });
+    await discardMutation(queueId);
+    return result;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      await discardMutation(queueId);
+      throw error;
+    }
+    throw new ApiError(202, "OFFLINE_QUEUED", "Saved offline and queued for delivery");
+  }
 }
 
 async function request<T>(path: string, init: RequestInit, allowRefresh: boolean): Promise<T> {
@@ -24,7 +45,7 @@ async function request<T>(path: string, init: RequestInit, allowRefresh: boolean
   if (init.body) headers.set("Content-Type", "application/json");
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
 
-  const response = await fetch(`${config.webApiUrl}${path}`, { ...init, headers });
+  const response = await fetch(`${config.apiUrl}${path}`, { ...init, headers });
   if (response.status === 401 && accessToken && allowRefresh) {
     const refreshed = await useSessionStore.getState().refreshAccess();
     if (refreshed) return request<T>(path, init, false);

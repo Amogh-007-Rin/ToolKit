@@ -1,4 +1,6 @@
-FROM rust:1.93-slim AS builder
+# Keep the build and runtime on the same Debian release so the compiled binary
+# never requires a newer glibc than the runtime image provides.
+FROM rust:1.93-bookworm AS builder
 WORKDIR /app
 
 COPY Cargo.toml Cargo.lock ./

@@ -2,11 +2,12 @@ pub mod models;
 
 use crate::error::AppError;
 use chrono::{DateTime, Utc};
-use models::{Message, Room, RoomMember, RoomSummaryRow};
+use models::{InsertedMessage, Message, Room, RoomMember, RoomSummaryRow};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::types::Json;
+use std::collections::HashMap;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -43,10 +44,69 @@ pub async fn users_blocked(pool: &PgPool, user_a: &str, user_b: &str) -> Result<
     Ok(blocked)
 }
 
-pub async fn room_blocked_for_user(pool: &PgPool, room_id: &str, user_id: &str) -> Result<bool, AppError> {
+pub async fn room_blocked_for_user(
+    pool: &PgPool,
+    room_id: &str,
+    user_id: &str,
+) -> Result<bool, AppError> {
     let blocked: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM room_members rm JOIN public.\"Block\" b ON ((b.\"blockerId\"=$2 AND b.\"blockedId\"=rm.user_id) OR (b.\"blockedId\"=$2 AND b.\"blockerId\"=rm.user_id)) WHERE rm.room_id=$1 AND rm.user_id<>$2)")
         .bind(room_id).bind(user_id).fetch_one(pool).await?;
     Ok(blocked)
+}
+
+pub async fn consume_realtime_ticket(
+    pool: &PgPool,
+    jti: &str,
+    user_id: &str,
+) -> Result<bool, AppError> {
+    let jti_hash = hex::encode(Sha256::digest(jti.as_bytes()));
+    let result = sqlx::query(
+        "UPDATE public.\"RealtimeTicket\" SET \"consumedAt\" = NOW() WHERE \"jtiHash\" = $1 AND \"userId\" = $2 AND \"consumedAt\" IS NULL AND \"expiresAt\" > NOW()",
+    )
+    .bind(jti_hash)
+    .bind(user_id)
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected() == 1)
+}
+
+pub async fn user_active(pool: &PgPool, user_id: &str) -> Result<bool, AppError> {
+    let active = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS (SELECT 1 FROM public.\"User\" WHERE id = $1 AND \"hiddenAt\" IS NULL AND \"suspendedAt\" IS NULL)",
+    )
+    .bind(user_id)
+    .fetch_one(pool)
+    .await?;
+    Ok(active)
+}
+
+pub async fn set_user_last_seen(
+    pool: &PgPool,
+    user_id: &str,
+    at: DateTime<Utc>,
+) -> Result<(), AppError> {
+    sqlx::query("INSERT INTO user_presence (user_id, last_seen_at) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET last_seen_at = EXCLUDED.last_seen_at")
+        .bind(user_id)
+        .bind(at)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn user_last_seen(
+    pool: &PgPool,
+    user_ids: &[String],
+) -> Result<HashMap<String, DateTime<Utc>>, AppError> {
+    if user_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let rows = sqlx::query_as::<_, (String, DateTime<Utc>)>(
+        "SELECT user_id, last_seen_at FROM user_presence WHERE user_id = ANY($1)",
+    )
+    .bind(user_ids)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows.into_iter().collect())
 }
 
 pub async fn find_or_create_direct_room(
@@ -168,34 +228,46 @@ pub async fn insert_message(
     id: &str,
     room_id: &str,
     sender_id: &str,
+    client_id: Option<&str>,
     content: &str,
     attachments: &[models::Attachment],
-) -> Result<Message, AppError> {
+) -> Result<(Message, bool), AppError> {
     let mut tx = pool.begin().await?;
-    let message = sqlx::query_as::<_, Message>(
-        "INSERT INTO messages (id, room_id, sender_id, content, attachments)
-         VALUES ($1, $2, $3, $4, $5)
+    let inserted = sqlx::query_as::<_, InsertedMessage>(
+        "INSERT INTO messages (id, room_id, sender_id, client_id, content, attachments)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (sender_id, client_id) WHERE client_id IS NOT NULL
+         DO UPDATE SET client_id = EXCLUDED.client_id
          RETURNING id, room_id, sender_id, content, COALESCE(attachments, '[]'::jsonb) AS attachments,
-                   created_at, edited_at, deleted_at",
+                   created_at, edited_at, deleted_at, (xmax = 0) AS inserted",
     )
     .bind(id)
     .bind(room_id)
     .bind(sender_id)
+    .bind(client_id)
     .bind(content)
     .bind(Json(attachments))
     .fetch_one(&mut *tx)
     .await?;
-    let recipients: Vec<String> = sqlx::query_scalar("SELECT user_id FROM room_members WHERE room_id = $1 AND user_id <> $2")
-        .bind(room_id).bind(sender_id).fetch_all(&mut *tx).await?;
-    for recipient in recipients {
-        let outbox_id = Uuid::new_v4().to_string();
-        let payload = serde_json::json!({ "roomId": room_id, "messageId": id, "senderId": sender_id, "summary": "New message" });
-        sqlx::query("INSERT INTO public.\"NotificationOutbox\" (id, \"userId\", \"eventType\", payload, \"dedupeKey\", attempts, \"availableAt\", \"createdAt\") VALUES ($1, $2, 'message', $3, $4, 0, NOW(), NOW()) ON CONFLICT (\"dedupeKey\") DO NOTHING")
-            .bind(outbox_id).bind(recipient).bind(payload).bind(format!("message:{id}"))
-            .execute(&mut *tx).await?;
+    let (message, was_inserted) = inserted.into_parts();
+    if was_inserted {
+        let recipients: Vec<String> = sqlx::query_scalar(
+            "SELECT user_id FROM room_members WHERE room_id = $1 AND user_id <> $2",
+        )
+        .bind(room_id)
+        .bind(sender_id)
+        .fetch_all(&mut *tx)
+        .await?;
+        for recipient in recipients {
+            let outbox_id = Uuid::new_v4().to_string();
+            let payload = serde_json::json!({ "roomId": room_id, "messageId": message.id, "senderId": sender_id, "summary": "New message" });
+            sqlx::query("INSERT INTO public.\"NotificationOutbox\" (id, \"userId\", \"eventType\", payload, \"dedupeKey\", attempts, \"availableAt\", \"createdAt\") VALUES ($1, $2, 'message', $3, $4, 0, NOW(), NOW()) ON CONFLICT (\"dedupeKey\") DO NOTHING")
+                .bind(outbox_id).bind(recipient).bind(payload).bind(format!("message:{}", message.id))
+                .execute(&mut *tx).await?;
+        }
     }
     tx.commit().await?;
-    Ok(message)
+    Ok((message, was_inserted))
 }
 
 pub async fn mark_read(pool: &PgPool, room_id: &str, user_id: &str) -> Result<(), AppError> {

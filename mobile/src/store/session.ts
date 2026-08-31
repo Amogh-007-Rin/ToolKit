@@ -1,8 +1,21 @@
 import * as SecureStore from "expo-secure-store";
 import { create } from "zustand";
 import { config } from "@/lib/config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { queryClient, queryPersister } from "@/lib/query";
 
 const REFRESH_TOKEN_KEY = "toolkit.refresh-token";
+const CACHE_USER_KEY = "toolkit.query-cache-user";
+
+async function prepareCacheForUser(userId: string | null) {
+  const previous = await AsyncStorage.getItem(CACHE_USER_KEY);
+  if (previous && previous !== userId) {
+    queryClient.clear();
+    await queryPersister.removeClient();
+  }
+  if (userId) await AsyncStorage.setItem(CACHE_USER_KEY, userId);
+  else await AsyncStorage.removeItem(CACHE_USER_KEY);
+}
 
 export interface SessionUser {
   id: string;
@@ -60,9 +73,11 @@ export const useSessionStore = create<SessionState>((set) => ({
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken, {
         keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
       });
+      await prepareCacheForUser(payload.user.id);
       set({ status: "authenticated", accessToken: payload.accessToken, user: payload.user });
     } catch {
       await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+      await prepareCacheForUser(null);
       set({ status: "anonymous", accessToken: null, user: null });
     }
   },
@@ -73,10 +88,12 @@ export const useSessionStore = create<SessionState>((set) => ({
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken, {
         keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
       });
+      await prepareCacheForUser(payload.user.id);
       set({ status: "authenticated", accessToken: payload.accessToken, user: payload.user });
       return true;
     } catch {
       await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+      await prepareCacheForUser(null);
       set({ status: "anonymous", accessToken: null, user: null });
       return false;
     }
@@ -85,6 +102,7 @@ export const useSessionStore = create<SessionState>((set) => ({
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken, {
       keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
     });
+    await prepareCacheForUser(user.id);
     set({ status: "authenticated", accessToken, user });
   },
   clear: async () => {
@@ -97,6 +115,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       }).catch(() => undefined);
     }
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+    await prepareCacheForUser(null);
     set({ status: "anonymous", accessToken: null, user: null });
   },
 }));

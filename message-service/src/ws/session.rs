@@ -2,7 +2,7 @@ use crate::db;
 use crate::state::{AppState, ConnId, Outgoing};
 use crate::ws::messages::{
     ClientEvent, MAX_ATTACHMENT_KEY_LEN, MAX_ATTACHMENT_NAME_LEN, MAX_ATTACHMENTS, MAX_CONTENT_LEN,
-    MAX_ID_LEN, ServerEvent,
+    MAX_ID_LEN, ServerEvent, content_policy_allows,
 };
 use axum::extract::ws::{Message, WebSocket};
 use chrono::Utc;
@@ -98,7 +98,11 @@ pub async fn run(state: AppState, socket: WebSocket, conn_id: ConnId, user_id: S
         .iter()
         .any(|entry| entry.value().user_id == user_id);
     if !has_other_connections {
-        let last_seen = Utc::now().to_rfc3339();
+        let disconnected_at = Utc::now();
+        if let Err(error) = db::set_user_last_seen(&state.db, &user_id, disconnected_at).await {
+            tracing::warn!(%error, %user_id, "failed to persist last seen");
+        }
+        let last_seen = disconnected_at.to_rfc3339();
         for room in &rooms_before_disconnect {
             state.deliver_to_room(
                 room,
@@ -148,7 +152,11 @@ async fn handle_client_event(state: &AppState, conn_id: ConnId, text: &str) {
                 return;
             }
             match db::is_member(&state.db, &room_id, &user_id).await {
-                Ok(true) if !db::room_blocked_for_user(&state.db, &room_id, &user_id).await.unwrap_or(true) => {
+                Ok(true)
+                    if !db::room_blocked_for_user(&state.db, &room_id, &user_id)
+                        .await
+                        .unwrap_or(true) =>
+                {
                     let is_first_room = state
                         .sessions
                         .get(&conn_id)
@@ -179,7 +187,12 @@ async fn handle_client_event(state: &AppState, conn_id: ConnId, text: &str) {
                         "you are not a member of this room".to_string(),
                     );
                 }
-                Ok(true) => send_error(state, conn_id, "blocked", "room unavailable because of a block".to_string()),
+                Ok(true) => send_error(
+                    state,
+                    conn_id,
+                    "blocked",
+                    "room unavailable because of a block".to_string(),
+                ),
                 Err(error) => {
                     send_error(state, conn_id, "database_error", error.to_string());
                 }
@@ -233,7 +246,12 @@ async fn handle_typing(
             return;
         }
     }
-    if db::room_blocked_for_user(&state.db, &room_id, user_id).await.unwrap_or(true) { return; }
+    if db::room_blocked_for_user(&state.db, &room_id, user_id)
+        .await
+        .unwrap_or(true)
+    {
+        return;
+    }
     let event = if typing {
         ServerEvent::TypingStart {
             room_id: room_id.clone(),
@@ -320,6 +338,30 @@ async fn handle_send_message(
         );
         return;
     }
+    if !content_policy_allows(
+        content,
+        &state.config.blocked_terms,
+        state.config.max_content_links,
+    ) {
+        ack_failure(
+            state,
+            conn_id,
+            &room_id,
+            temp_id.as_deref(),
+            "message rejected by content policy",
+        );
+        return;
+    }
+    if !state.allow_message(user_id) {
+        ack_failure(
+            state,
+            conn_id,
+            &room_id,
+            temp_id.as_deref(),
+            "message rate limit exceeded",
+        );
+        return;
+    }
 
     match db::is_member(&state.db, &room_id, user_id).await {
         Ok(true) => {}
@@ -345,8 +387,17 @@ async fn handle_send_message(
             return;
         }
     }
-    if db::room_blocked_for_user(&state.db, &room_id, user_id).await.unwrap_or(true) {
-        ack_failure(state, conn_id, &room_id, temp_id.as_deref(), "message blocked");
+    if db::room_blocked_for_user(&state.db, &room_id, user_id)
+        .await
+        .unwrap_or(true)
+    {
+        ack_failure(
+            state,
+            conn_id,
+            &room_id,
+            temp_id.as_deref(),
+            "message blocked",
+        );
         return;
     }
 
@@ -355,19 +406,22 @@ async fn handle_send_message(
         &Uuid::new_v4().to_string(),
         &room_id,
         user_id,
+        temp_id.as_deref(),
         content,
         &attachments,
     )
     .await
     {
-        Ok(message) => {
+        Ok((message, was_inserted)) => {
             let message_id = message.id.clone();
             state.join_room(conn_id, &room_id);
-            let event = ServerEvent::Message { message };
-            let payload = event.to_json();
-            if let Err(error) = state.redis.publish_room(&room_id, &payload).await {
-                tracing::error!(%error, %room_id, "failed to publish message, delivering locally");
-                state.deliver_to_room(&room_id, event);
+            if was_inserted {
+                let event = ServerEvent::Message { message };
+                let payload = event.to_json();
+                if let Err(error) = state.redis.publish_room(&room_id, &payload).await {
+                    tracing::error!(%error, %room_id, "failed to publish message, delivering locally");
+                    state.deliver_to_room(&room_id, event);
+                }
             }
             state.send_to_conn(
                 conn_id,

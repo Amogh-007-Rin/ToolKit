@@ -14,10 +14,15 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="notifications" options={{ presentation: "modal" }} />
         <Stack.Screen name="profile" />
+        <Stack.Screen name="user/[tag]" />
+        <Stack.Screen name="saved" />
+        <Stack.Screen name="legal" />
+        <Stack.Screen name="support" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="conversation/[id]" />
         <Stack.Screen name="collection/[id]" />
         <Stack.Screen name="account" />
+        <Stack.Screen name="offline-queue" />
         <Stack.Screen name="new-post" options={{ presentation: "modal" }} />
         <Stack.Screen name="post/[id]" />
       </Stack>

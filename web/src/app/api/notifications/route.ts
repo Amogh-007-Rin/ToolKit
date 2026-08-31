@@ -11,10 +11,18 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const limit = Math.min(Math.max(Number(searchParams.get("limit") ?? 30), 1), 30);
+  const type = searchParams.get("type");
+  const unreadOnly = searchParams.get("unread") === "true";
+  const allowedTypes = new Set(["follow", "like", "comment", "message"]);
+  const where = {
+    userId,
+    ...(type && allowedTypes.has(type) ? { type } : {}),
+    ...(unreadOnly ? { read: false } : {}),
+  };
 
   const [notifications, unreadCount, totalCount] = await Promise.all([
     prisma.notification.findMany({
-      where: { userId },
+      where,
       include: {
         actor: { select: { name: true, image: true, tag: true } },
       },

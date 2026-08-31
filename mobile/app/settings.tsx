@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { Accessibility, ChevronRight, LogOut, Palette, ShieldCheck } from "lucide-react-native";
+import { Accessibility, Bookmark, ChevronRight, FileText, LifeBuoy, LogOut, Palette, RefreshCcw, ShieldCheck } from "lucide-react-native";
 import { Alert, Pressable, Switch, Text, View } from "react-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,9 +10,13 @@ import { ThemePreference, usePreferences } from "@/store/preferences";
 import { useSessionStore } from "@/store/session";
 import { getNotificationPreferences, NotificationPreferences, updateNotificationPreferences } from "@/services/product";
 import { disablePushNotifications, enablePushNotifications } from "@/services/push";
+import { recordConsent } from "@/services/account";
+import { captureProductEvent } from "@/lib/telemetry";
+
+const CONSENT_VERSION = "2026-08-31";
 
 export default function SettingsScreen() {
-  const { theme, reduceMotion, highContrast, biometricLock, setTheme, setReduceMotion, setHighContrast, setBiometricLock } = usePreferences();
+  const { theme, reduceMotion, highContrast, biometricLock, analyticsEnabled, setTheme, setReduceMotion, setHighContrast, setBiometricLock, setAnalyticsEnabled } = usePreferences();
   const clear = useSessionStore((state) => state.clear);
   const client = useQueryClient();
   const notifications = useQuery({ queryKey: ["notification-preferences"], queryFn: getNotificationPreferences });
@@ -37,6 +41,11 @@ export default function SettingsScreen() {
       Alert.alert("Notifications unavailable", cause instanceof Error ? cause.message : "Could not update notifications");
     }
   };
+  const changeAnalytics = async (enabled: boolean) => {
+    setAnalyticsEnabled(enabled);
+    try { await recordConsent(enabled ? "analytics_opt_in" : "analytics_opt_out", CONSENT_VERSION); if (enabled) await captureProductEvent("analytics_enabled", { source: "settings" }); }
+    catch { Alert.alert("Preference saved on device", "ToolKit will synchronize the consent record when connectivity returns."); }
+  };
 
   return (
     <Screen title={en.settings.title} subtitle={en.settings.subtitle}>
@@ -59,6 +68,10 @@ export default function SettingsScreen() {
         <SettingToggle label="Social notifications" value={notifications.data?.preferences.notifySocial ?? false} onChange={(notifySocial) => updateNotifications.mutate({ notifySocial })} />
         <SettingToggle label="Show detailed previews" value={notifications.data?.preferences.pushPreview ?? false} onChange={(pushPreview) => updateNotifications.mutate({ pushPreview })} />
       </Section>
+      <Section icon={ShieldCheck} title="Privacy-conscious analytics">
+        <Text className="text-sm leading-5 text-muted-foreground">Optional product analytics help improve navigation and reliability. Message content, protected media URLs, profile details, credentials, and tokens are never included. Essential security and crash telemetry remains separate.</Text>
+        <SettingToggle label="Share optional product analytics" value={analyticsEnabled} onChange={(value) => void changeAnalytics(value)} />
+      </Section>
       <Section icon={LogOut} title={en.settings.security}>
         <SettingToggle label="Biometric and device lock" value={biometricLock} onChange={(value) => void changeBiometricLock(value)} />
         <Pressable accessibilityRole="button" onPress={signOut} className="min-h-12 items-center justify-center rounded-2xl bg-destructive/10 px-4">
@@ -66,6 +79,10 @@ export default function SettingsScreen() {
         </Pressable>
       </Section>
       <Pressable onPress={() => router.push("/account")} className="min-h-16 flex-row items-center gap-3 rounded-3xl border border-border bg-card px-5"><ShieldCheck color="#ed4b4b" size={21} /><Text className="flex-1 text-base font-bold text-foreground">Account, privacy, sessions, and data</Text><ChevronRight color="#6f6a87" size={20} /></Pressable>
+      <Pressable onPress={() => router.push("/saved" as never)} className="min-h-16 flex-row items-center gap-3 rounded-3xl border border-border bg-card px-5"><Bookmark color="#ed4b4b" size={21} /><Text className="flex-1 text-base font-bold text-foreground">Saved posts</Text><ChevronRight color="#6f6a87" size={20} /></Pressable>
+      <Pressable onPress={() => router.push("/offline-queue" as never)} className="min-h-16 flex-row items-center gap-3 rounded-3xl border border-border bg-card px-5"><RefreshCcw color="#ed4b4b" size={21} /><Text className="flex-1 text-base font-bold text-foreground">Offline activity and failed changes</Text><ChevronRight color="#6f6a87" size={20} /></Pressable>
+      <Pressable onPress={() => router.push("/legal" as never)} className="min-h-16 flex-row items-center gap-3 rounded-3xl border border-border bg-card px-5"><FileText color="#ed4b4b" size={21} /><Text className="flex-1 text-base font-bold text-foreground">Legal, privacy, and deletion</Text><ChevronRight color="#6f6a87" size={20} /></Pressable>
+      <Pressable onPress={() => router.push("/support" as never)} className="min-h-16 flex-row items-center gap-3 rounded-3xl border border-border bg-card px-5"><LifeBuoy color="#ed4b4b" size={21} /><Text className="flex-1 text-base font-bold text-foreground">Support</Text><ChevronRight color="#6f6a87" size={20} /></Pressable>
     </Screen>
   );
 }

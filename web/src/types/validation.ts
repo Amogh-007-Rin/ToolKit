@@ -63,4 +63,6 @@ export const profileUpdateSchema = z.object({
     .regex(/^[a-zA-Z0-9_-]+$/, "Tag can only contain letters, numbers, hyphens, and underscores")
     .optional()
     .nullable(),
+  image: z.string().trim().max(500).optional().nullable(),
+  banner: z.string().trim().max(500).optional().nullable(),
 });

@@ -66,7 +66,13 @@ async fn current_user(
     headers: HeaderMap,
     Query(token_query): Query<TokenQuery>,
 ) -> Result<String, AppError> {
-    auth::authenticate(headers, Query(token_query), &state.config.jwt_secret).await
+    auth::authenticate(
+        headers,
+        Query(token_query),
+        &state.config.jwt_secret,
+        &state.db,
+    )
+    .await
 }
 
 async fn list_rooms(
@@ -78,7 +84,11 @@ async fn list_rooms(
 
     let mut rows = db::list_rooms(&state.db, &user_id).await?;
     let mut visible = Vec::with_capacity(rows.len());
-    for row in rows.drain(..) { if !db::room_blocked_for_user(&state.db, &row.id, &user_id).await? { visible.push(row); } }
+    for row in rows.drain(..) {
+        if !db::room_blocked_for_user(&state.db, &row.id, &user_id).await? {
+            visible.push(row);
+        }
+    }
     let rows = visible;
     let room_ids: Vec<String> = rows.iter().map(|row| row.id.clone()).collect();
     let member_rows = db::room_members_for_rooms(&state.db, &room_ids).await?;
@@ -89,6 +99,8 @@ async fn list_rooms(
             .or_default()
             .push(member.user_id);
     }
+    let all_members: Vec<String> = members_by_room.values().flatten().cloned().collect();
+    let persisted_last_seen = db::user_last_seen(&state.db, &all_members).await?;
 
     let rooms: Vec<RoomListItem> =
         rows.into_iter()
@@ -107,6 +119,7 @@ async fn list_rooms(
                         } else {
                             state
                                 .get_user_last_seen(member_id)
+                                .or_else(|| persisted_last_seen.get(member_id).copied())
                                 .map(|dt| dt.to_rfc3339())
                         };
                         (member_id.clone(), last_seen)
@@ -155,7 +168,11 @@ async fn create_direct_room(
             "cannot open a direct room with yourself".to_string(),
         ));
     }
-    if db::users_blocked(&state.db, &user_id, &other).await? { return Err(AppError::BadRequest("blocked users cannot start a conversation".to_string())); }
+    if db::users_blocked(&state.db, &user_id, &other).await? {
+        return Err(AppError::BadRequest(
+            "blocked users cannot start a conversation".to_string(),
+        ));
+    }
 
     let room = db::find_or_create_direct_room(&state.db, &user_id, &other).await?;
     let members = db::room_member_ids(&state.db, &room.id).await?;
@@ -177,7 +194,9 @@ async fn room_messages(
 ) -> Result<Json<Value>, AppError> {
     let user_id = current_user(State(state.clone()), headers, Query(token_query)).await?;
 
-    if !db::is_member(&state.db, &room_id, &user_id).await? || db::room_blocked_for_user(&state.db, &room_id, &user_id).await? {
+    if !db::is_member(&state.db, &room_id, &user_id).await?
+        || db::room_blocked_for_user(&state.db, &room_id, &user_id).await?
+    {
         return Err(AppError::NotFound("room not found".to_string()));
     }
 
@@ -199,7 +218,9 @@ async fn mark_read(
 ) -> Result<Json<Value>, AppError> {
     let user_id = current_user(State(state.clone()), headers, Query(token_query)).await?;
 
-    if !db::is_member(&state.db, &room_id, &user_id).await? || db::room_blocked_for_user(&state.db, &room_id, &user_id).await? {
+    if !db::is_member(&state.db, &room_id, &user_id).await?
+        || db::room_blocked_for_user(&state.db, &room_id, &user_id).await?
+    {
         return Err(AppError::NotFound("room not found".to_string()));
     }
 

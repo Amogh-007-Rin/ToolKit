@@ -11,6 +11,9 @@ import {
 } from "@/lib/storage";
 import type { Prisma } from "../../../../../generated/prisma/client";
 import { usersBlockEachOther } from "@/lib/blocks";
+import { checkContentPolicy } from "@/lib/contentSafety";
+
+const MAX_POST_MEDIA = 10;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getSessionUserId();
@@ -63,6 +66,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const tags = [...new Set(parsed.data.tags)];
+  const policy = checkContentPolicy(`${parsed.data.caption}\n${tags.join(" ")}`);
+  if (!policy.allowed) {
+    return NextResponse.json({ code: policy.code, error: policy.message }, { status: 422 });
+  }
 
   interface MediaEntry {
     id?: string;
@@ -109,19 +116,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const newMediaCount = newMediaIndex;
-  const totalVideos =
-    post.media.filter((m) => keepIds.has(m.id) && m.type === "video").length +
-    mediaEntries.filter((e) => e.key && e.type === "video").length;
-  if (totalVideos > 1) {
-    return NextResponse.json({ error: "Only one video per post is allowed" }, { status: 400 });
-  }
-  if (totalVideos === 1 && keepIds.size + newMediaCount > 1) {
-    return NextResponse.json({ error: "A video cannot be combined with other media" }, { status: 400 });
-  }
-
   const remainingCount = keepIds.size + newMediaCount;
   if (remainingCount <= 0) {
     return NextResponse.json({ error: "A post must have at least one image or video" }, { status: 400 });
+  }
+  if (remainingCount > MAX_POST_MEDIA) {
+    return NextResponse.json(
+      { code: "VALIDATION_FAILED", error: `A post can contain at most ${MAX_POST_MEDIA} media items` },
+      { status: 400 },
+    );
   }
 
   try {

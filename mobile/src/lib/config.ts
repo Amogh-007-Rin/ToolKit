@@ -17,4 +17,7 @@ export const config = {
     process.env.EXPO_PUBLIC_MESSAGE_SERVICE_URL ??
     extra.messageServiceUrl ??
     "http://127.0.0.1:8080",
+  posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST ?? "",
+  posthogKey: process.env.EXPO_PUBLIC_POSTHOG_KEY ?? "",
+  glitchtipDsn: process.env.EXPO_PUBLIC_GLITCHTIP_DSN ?? "",
 } as const;

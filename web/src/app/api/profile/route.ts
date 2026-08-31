@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { profileUpdateSchema } from "@/types/validation";
-import { resolveStoredUrl } from "@/lib/storage";
+import { assertValidKey, isOwnedObjectKey, resolveStoredUrl } from "@/lib/storage";
 import { Prisma } from "../../../../generated/prisma/client";
+import { checkContentPolicy } from "@/lib/contentSafety";
 
 export async function GET() {
   const userId = await getSessionUserId();
@@ -63,7 +64,15 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const { name, bio, role, location, skills, tag } = parsed.data;
+  const { name, bio, role, location, skills, tag, image, banner } = parsed.data;
+  const policy = checkContentPolicy([name, bio, role, location, ...skills].join("\n"));
+  if (!policy.allowed) return NextResponse.json({ code: policy.code, error: policy.message }, { status: 422 });
+  for (const [field, value] of [["image", image], ["banner", banner]] as const) {
+    if (value) {
+      try { assertValidKey(value); } catch { return NextResponse.json({ code: "VALIDATION_FAILED", error: `Invalid ${field} key` }, { status: 400 }); }
+      if (!isOwnedObjectKey(value, userId, "profile")) return NextResponse.json({ code: "FORBIDDEN", error: `${field} does not belong to this user` }, { status: 403 });
+    }
+  }
 
   try {
     const user = await prisma.user.update({
@@ -75,12 +84,15 @@ export async function PATCH(req: Request) {
         location: location || null,
         skills: skills,
         tag: tag?.trim() || null,
+        ...(image !== undefined ? { image } : {}),
+        ...(banner !== undefined ? { banner } : {}),
       },
       select: {
         id: true,
         name: true,
         email: true,
         image: true,
+        banner: true,
         bio: true,
         role: true,
         location: true,
@@ -89,7 +101,8 @@ export async function PATCH(req: Request) {
       },
     });
 
-    return NextResponse.json({ user: { ...user, image: await resolveStoredUrl(user.image) } });
+    const [resolvedImage, resolvedBanner] = await Promise.all([resolveStoredUrl(user.image), resolveStoredUrl(user.banner)]);
+    return NextResponse.json({ user: { ...user, image: resolvedImage, banner: resolvedBanner } });
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

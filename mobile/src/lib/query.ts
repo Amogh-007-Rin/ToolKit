@@ -1,4 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,6 +15,14 @@ export const queryClient = new QueryClient({
     mutations: { retry: false },
   },
 });
+
+export const queryPersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: "toolkit-query-cache-v1",
+  throttleTime: 1_000,
+});
+
+export const QUERY_CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
 
 export class ApiError extends Error {
   constructor(

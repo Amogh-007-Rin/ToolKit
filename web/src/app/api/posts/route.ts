@@ -3,6 +3,9 @@ import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { postCreateSchema } from "@/types/validation";
 import { assertValidKey, isOwnedObjectKey, resolveStoredUrl } from "@/lib/storage";
+import { checkContentPolicy } from "@/lib/contentSafety";
+
+const MAX_POST_MEDIA = 10;
 
 export async function GET(req: Request) {
   const userId = await getSessionUserId();
@@ -83,9 +86,17 @@ export async function POST(req: Request) {
   }
 
   const tags = [...new Set(parsed.data.tags)];
+  const policy = checkContentPolicy(`${parsed.data.caption}\n${tags.join(" ")}`);
+  if (!policy.allowed) return NextResponse.json({ code: policy.code, error: policy.message }, { status: 422 });
 
   if (!Array.isArray(body.media) || body.media.length === 0) {
     return NextResponse.json({ error: "At least one media entry is required" }, { status: 400 });
+  }
+  if (body.media.length > MAX_POST_MEDIA) {
+    return NextResponse.json(
+      { code: "VALIDATION_FAILED", error: `A post can contain at most ${MAX_POST_MEDIA} media items` },
+      { status: 400 },
+    );
   }
 
   const mediaInput: { key: string; type: string; order: number }[] = [];
@@ -111,14 +122,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Media key does not belong to this user" }, { status: 403 });
     }
     mediaInput.push({ key, type, order: typeof order === "number" && order >= 0 ? order : mediaInput.length });
-  }
-
-  const videos = mediaInput.filter((m) => m.type === "video");
-  if (videos.length > 1) {
-    return NextResponse.json({ error: "Only one video per post is allowed" }, { status: 400 });
-  }
-  if (videos.length === 1 && mediaInput.length > 1) {
-    return NextResponse.json({ error: "A video cannot be combined with other media" }, { status: 400 });
   }
 
   try {

@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import prisma from "@/db";
 import { getSessionUserId } from "@/lib/session";
 import { FixedWindowRateLimiter } from "@/lib/rateLimit";
+import { checkContentPolicy } from "@/lib/contentSafety";
 
 const MODEL = "gemini-3.1-flash-lite";
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -190,6 +191,8 @@ export async function POST(req: Request) {
   if (query.length > 200) {
     return NextResponse.json({ error: "Query is too long" }, { status: 400 });
   }
+  const policy = checkContentPolicy(query);
+  if (!policy.allowed) return NextResponse.json({ code: policy.code, error: policy.message }, { status: 422 });
   const chatId = body.chatId?.trim() || null;
   let history: HistoryTurn[] = [];
   if (chatId) {

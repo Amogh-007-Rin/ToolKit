@@ -1,13 +1,14 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Eye, EyeOff } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandMark } from "@/components/BrandMark";
-import { forgotPassword, OAuthProvider, register, resendVerification, signIn, signInWithOAuth } from "@/services/auth";
+import { forgotPassword, OAuthProvider, register, resendVerification, resetPassword, restoreAccount, signIn, signInWithOAuth, verifyEmail } from "@/services/auth";
 import { useSessionStore } from "@/store/session";
 
 export default function AuthScreen() {
+  const { action, token } = useLocalSearchParams<{ action?: string; token?: string }>();
   const [mode, setMode] = useState<"signin" | "register">("signin");
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
@@ -16,7 +17,28 @@ export default function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [actionComplete, setActionComplete] = useState<string | null>(null);
   const setSession = useSessionStore((state) => state.setSession);
+
+  useEffect(() => {
+    if (action !== "verify" || !token) return;
+    setBusy(true); setError(null);
+    void verifyEmail(token).then(() => setActionComplete("Your email is verified. You can now sign in.")).catch((cause) => setError(cause instanceof Error ? cause.message : "Verification failed")).finally(() => setBusy(false));
+  }, [action, token]);
+
+  const submitRecovery = async () => {
+    if (busy) return;
+    setBusy(true); setError(null);
+    try {
+      if (action === "reset" && token) { if (newPassword.length < 8) throw new Error("Use at least 8 characters for your new password."); await resetPassword(token, newPassword); setActionComplete("Your password has been reset. Sign in with the new password."); }
+      else if (action === "restore") { if (!email.trim() || !password) throw new Error("Enter the email and password for the deleted account."); const payload = await restoreAccount(email.trim(), password); await setSession(payload.accessToken, payload.refreshToken, payload.user); router.replace("/(tabs)"); }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Account recovery failed"); }
+    finally { setBusy(false); }
+  };
+
+  if (action === "verify") return <ActionScreen title="Verify your email" detail={actionComplete ?? (busy ? "Verifying your secure link…" : error ?? "This verification link could not be used.")} error={Boolean(error)} onDone={actionComplete ? () => router.replace("/auth") : undefined} />;
+  if (action === "reset" || action === "restore") return <SafeAreaView className="flex-1 items-center justify-center bg-background px-6"><View className="w-full max-w-md gap-5"><BrandMark /><Text className="text-3xl font-bold text-foreground">{action === "reset" ? "Choose a new password" : "Restore your account"}</Text><Text className="leading-6 text-muted-foreground">{actionComplete ?? (action === "reset" ? "Reset the password for this verified recovery link." : "Restore an account during its 30-day recovery window.")}</Text>{!actionComplete ? <>{action === "restore" ? <Field placeholder="Email" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} /> : null}<Field placeholder={action === "reset" ? "New password" : "Password"} secureTextEntry value={action === "reset" ? newPassword : password} onChangeText={action === "reset" ? setNewPassword : setPassword} />{error ? <Text accessibilityRole="alert" className="text-destructive">{error}</Text> : null}<Pressable disabled={busy} onPress={() => void submitRecovery()} className="min-h-14 items-center justify-center rounded-2xl bg-primary disabled:opacity-50">{busy ? <ActivityIndicator color="white" /> : <Text className="font-bold text-white">{action === "reset" ? "Reset password" : "Restore account"}</Text>}</Pressable></> : <Pressable onPress={() => router.replace("/auth")} className="min-h-14 items-center justify-center rounded-2xl bg-primary"><Text className="font-bold text-white">Continue to sign in</Text></Pressable>}</View></SafeAreaView>;
 
   const submit = async () => {
     if (busy) return;
@@ -116,4 +138,8 @@ export default function AuthScreen() {
 
 function Field(props: React.ComponentProps<typeof TextInput>) {
   return <TextInput placeholderTextColor="#6f6a87" className="h-14 rounded-2xl border border-border bg-input px-4 pr-12 text-base text-foreground" {...props} />;
+}
+
+function ActionScreen({ title, detail, error, onDone }: { title: string; detail: string; error: boolean; onDone?: () => void }) {
+  return <SafeAreaView className="flex-1 items-center justify-center bg-background px-6"><View className="w-full max-w-md items-center gap-6"><BrandMark /><Text className="text-center text-3xl font-bold text-foreground">{title}</Text><Text accessibilityRole={error ? "alert" : undefined} className={`text-center leading-6 ${error ? "text-destructive" : "text-muted-foreground"}`}>{detail}</Text>{onDone ? <Pressable onPress={onDone} className="min-h-14 w-full items-center justify-center rounded-2xl bg-primary"><Text className="font-bold text-white">Continue</Text></Pressable> : null}</View></SafeAreaView>;
 }

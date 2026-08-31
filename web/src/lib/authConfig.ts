@@ -32,7 +32,7 @@ export const NEXT_AUTH_CONFIG: AuthOptions = {
                 }
 
                 const user = await prisma.user.findUnique({ where: { email } });
-                if (!user?.password) return null;
+                if (!user?.password || user.hiddenAt || user.suspendedAt) return null;
 
                 const isValid = await verifyPassword(password, user.password);
                 if (!isValid) return null;

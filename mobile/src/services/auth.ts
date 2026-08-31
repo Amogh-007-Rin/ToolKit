@@ -37,6 +37,20 @@ export function forgotPassword(email: string) {
   return authRequest<{ accepted: true }>("forgot-password", { email });
 }
 
+export function verifyEmail(token: string) {
+  return authRequest<{ verified: true }>("verify-email", { token });
+}
+
+export function resetPassword(token: string, password: string) {
+  return authRequest<{ reset: true }>("reset-password", { token, password });
+}
+
+export async function restoreAccount(email: string, password: string): Promise<NativeAuthPayload> {
+  const response = await fetch(`${config.apiUrl}/account/restore`, { method: "POST", headers: { "Content-Type": "application/json", "X-Device-Name": "ToolKit mobile" }, body: JSON.stringify({ email, password }) });
+  if (!response.ok) { const error = (await response.json().catch(() => ({}))) as AuthErrorBody; throw new Error(error.message ?? "Account could not be restored"); }
+  return response.json() as Promise<NativeAuthPayload>;
+}
+
 export type OAuthProvider = "google" | "github" | "linkedin" | "discord";
 export async function signInWithOAuth(provider: OAuthProvider): Promise<NativeAuthPayload> {
   const redirectUri = makeRedirectUri({ scheme: "toolkit", path: "oauth/callback" });

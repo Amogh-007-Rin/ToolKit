@@ -37,8 +37,8 @@ paths:
                   required: [name]
                   properties: { name: { type: string, minLength: 1, maxLength: 80 } }
       responses:
-        '201':
-          description: Account and native session created
+        '202':
+          description: Account created; email verification is required
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthPayload' }
@@ -74,8 +74,153 @@ paths:
             schema: { $ref: '#/components/schemas/RefreshRequest' }
       responses:
         '204': { description: Session revoked or already absent }
+  /auth/forgot-password:
+    post: { operationId: forgotPassword, security: [], requestBody: { $ref: '#/components/requestBodies/EmailBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /auth/resend-verification:
+    post: { operationId: resendVerification, security: [], requestBody: { $ref: '#/components/requestBodies/EmailBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /auth/verify-email:
+    post: { operationId: verifyEmail, security: [], requestBody: { $ref: '#/components/requestBodies/TokenBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /auth/reset-password:
+    post: { operationId: resetPassword, security: [], requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /auth/oauth/start:
+    post: { operationId: startOAuth, security: [], requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /auth/oauth/exchange:
+    post: { operationId: exchangeOAuthCode, security: [], requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { content: { application/json: { schema: { $ref: '#/components/schemas/AuthPayload' } } }, description: Native session created } } }
+  /sessions:
+    get: { operationId: listSessions, responses: { '200': { $ref: '#/components/responses/JsonResponse' }, '401': { $ref: '#/components/responses/AuthError' } } }
+    delete: { operationId: revokeAllSessions, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /account/deletion:
+    post: { operationId: scheduleAccountDeletion, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /account/restore:
+    post: { operationId: restoreAccount, security: [], requestBody: { $ref: '#/components/requestBodies/CredentialsBody' }, responses: { '200': { content: { application/json: { schema: { $ref: '#/components/schemas/AuthPayload' } } }, description: Account restored } } }
+  /devices:
+    post: { operationId: registerDevice, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
+    delete:
+      operationId: unregisterDevice
+      parameters: [{ in: query, name: token, required: true, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/JsonResponse' } }
+  /realtime/ticket:
+    post: { operationId: createRealtimeTicket, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /dashboard/discover:
+    get: { operationId: getDiscoverFeed, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /posts:
+    get: { operationId: listPosts, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    post: { operationId: createPost, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
+  /posts/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get: { operationId: getPost, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    patch: { operationId: updatePost, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    delete: { operationId: deletePost, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /posts/saved:
+    get: { operationId: listSavedPosts, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /posts/{id}/comments:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get: { operationId: listComments, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    post: { operationId: createComment, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
+    delete: { operationId: deleteComment, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /posts/{id}/like:
+    post: { operationId: togglePostLike, parameters: [{ $ref: '#/components/parameters/Id' }], responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /posts/{id}/save:
+    post: { operationId: togglePostSave, parameters: [{ $ref: '#/components/parameters/Id' }], responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /collections:
+    get: { operationId: listCollections, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    post: { operationId: createCollection, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
+  /collections/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    patch: { operationId: updateCollection, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    delete: { operationId: deleteCollection, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /collections/{id}/tools:
+    post: { operationId: createTool, parameters: [{ $ref: '#/components/parameters/Id' }], requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
+  /collections/{id}/tools/{toolId}:
+    parameters: [{ $ref: '#/components/parameters/Id' }, { in: path, name: toolId, required: true, schema: { type: string } }]
+    patch: { operationId: updateTool, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    delete: { operationId: deleteTool, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /collections/showcase:
+    patch: { operationId: updateCollectionShowcase, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /collections/import:
+    post: { operationId: importCollection, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
+  /profile:
+    get: { operationId: getProfile, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    patch: { operationId: updateProfile, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /profile/media:
+    patch: { operationId: updateProfileMedia, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /users/search:
+    get:
+      operationId: searchUsers
+      parameters: [{ in: query, name: q, schema: { type: string, maxLength: 100 } }]
+      responses: { '200': { $ref: '#/components/responses/JsonResponse' } }
+  /users/{tag}:
+    get: { operationId: getPublicProfile, parameters: [{ in: path, name: tag, required: true, schema: { type: string } }], responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /users/{tag}/follow:
+    post: { operationId: toggleFollow, parameters: [{ in: path, name: tag, required: true, schema: { type: string } }], responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /ai-search:
+    post: { operationId: askAI, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' }, '429': { $ref: '#/components/responses/RateLimitError' } } }
+  /ai-search/chats:
+    get: { operationId: listAIChats, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    post: { operationId: createAIChat, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
+  /ai-search/chats/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get: { operationId: getAIChat, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    delete: { operationId: deleteAIChat, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /notifications:
+    get:
+      operationId: listNotifications
+      parameters:
+        - { in: query, name: type, schema: { type: string, enum: [follow, like, comment, message] } }
+        - { in: query, name: unread, schema: { type: boolean } }
+      responses: { '200': { $ref: '#/components/responses/JsonResponse' } }
+    patch: { operationId: markAllNotificationsRead, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    delete: { operationId: clearNotifications, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /notifications/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    patch: { operationId: markNotificationRead, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    delete: { operationId: deleteNotification, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /notifications/preferences:
+    get: { operationId: getNotificationPreferences, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    patch: { operationId: updateNotificationPreferences, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /media/presign:
+    post: { operationId: presignMediaUpload, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /media/url:
+    get: { operationId: refreshMediaUrl, parameters: [{ in: query, name: key, required: true, schema: { type: string } }], responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /settings/privacy:
+    get: { operationId: getPrivacyPreferences, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    patch: { operationId: updatePrivacyPreferences, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /settings/password:
+    patch: { operationId: changePassword, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /settings/export:
+    get: { operationId: exportAccountData, responses: { '200': { description: Account JSON export, content: { application/json: { schema: { $ref: '#/components/schemas/JsonObject' } } } } } }
+  /blocks:
+    get: { operationId: listBlocks, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    post: { operationId: blockUser, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
+    delete: { operationId: unblockUser, parameters: [{ in: query, name: userId, required: true, schema: { type: string } }], responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /reports:
+    post: { operationId: reportContent, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
+  /appeals:
+    post: { operationId: createAppeal, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
+  /messages/contacts:
+    get: { operationId: listMessageContacts, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /messages/unread:
+    get: { operationId: getMessageUnreadCount, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
 components:
+  parameters:
+    Id: { in: path, name: id, required: true, schema: { type: string } }
+  requestBodies:
+    JsonBody:
+      required: true
+      content: { application/json: { schema: { $ref: '#/components/schemas/JsonObject' } } }
+    CredentialsBody:
+      required: true
+      content: { application/json: { schema: { $ref: '#/components/schemas/Credentials' } } }
+    EmailBody:
+      required: true
+      content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string, format: email } } } } }
+    TokenBody:
+      required: true
+      content: { application/json: { schema: { type: object, required: [token], properties: { token: { type: string } } } } }
   schemas:
+    JsonObject:
+      type: object
+      additionalProperties: true
     Credentials:
       type: object
       additionalProperties: false
@@ -112,6 +257,9 @@ components:
         code: { type: string }
         message: { type: string }
   responses:
+    JsonResponse:
+      description: Successful JSON response
+      content: { application/json: { schema: { $ref: '#/components/schemas/JsonObject' } } }
     AuthError:
       description: Authentication failed or expired
       content:

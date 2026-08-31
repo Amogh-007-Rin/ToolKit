@@ -73,6 +73,10 @@ bun start
 
 Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
+For a complete web, messaging, and mobile review environment, follow
+[REVIEW.md](REVIEW.md). It includes database migration, local-network mobile
+configuration, service health checks, and known external-service limitations.
+
 ## 🛠️ Development
 
 ```bash

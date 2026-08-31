@@ -1,17 +1,19 @@
-import { QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { PropsWithChildren, useEffect, useRef, useState } from "react";
-import { AppState, AppStateStatus, Pressable, Text, useColorScheme, View } from "react-native";
+import { AppState, AppStateStatus, Linking, Pressable, Text, useColorScheme, View } from "react-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useNetworkState } from "expo-network";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import { api } from "@/lib/api";
 import { processMutationQueue } from "@/lib/offlineQueue";
+import { executeQueuedMediaMutation } from "@/services/media";
 
 Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: true }) });
-import { queryClient } from "@/lib/query";
+import { QUERY_CACHE_MAX_AGE, queryClient, queryPersister } from "@/lib/query";
 import { usePreferences } from "@/store/preferences";
 import { useSessionStore } from "@/store/session";
+import { parseAppLink } from "@/lib/links";
 
 export function AppProviders({ children }: PropsWithChildren) {
   const systemTheme = useColorScheme();
@@ -24,13 +26,30 @@ export function AppProviders({ children }: PropsWithChildren) {
   const isDark = preference === "dark" || (preference === "system" && systemTheme === "dark");
 
   useEffect(() => {
+    const openLink = ({ url }: { url: string }) => {
+      const link = parseAppLink(url);
+      if (link.kind === "profile") router.push({ pathname: "/user/[tag]", params: { tag: link.tag } });
+      else if (link.kind === "post") router.push({ pathname: "/post/[id]", params: { id: link.id } });
+      else if (link.kind === "conversation") router.push({ pathname: "/conversation/[id]", params: { id: link.id } });
+      else if (link.kind === "notification") router.push("/notifications");
+      else if (link.kind === "verifyEmail") router.push({ pathname: "/auth", params: { action: "verify", token: link.token } });
+      else if (link.kind === "resetPassword") router.push({ pathname: "/auth", params: { action: "reset", token: link.token } });
+      else if (link.kind === "restoreAccount") router.push({ pathname: "/auth", params: { action: "restore" } });
+    };
+    const subscription = Linking.addEventListener("url", openLink);
+    void Linking.getInitialURL().then((url) => { if (url) openLink({ url }); });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
     void restore();
   }, [restore]);
 
   useEffect(() => {
     if (network.isInternetReachable) void processMutationQueue(async (item) => {
+      if (item.operation === "media.post.create") return executeQueuedMediaMutation(item);
       await api(item.path, { method: item.method, body: item.body, headers: { "Idempotency-Key": item.id } });
-    });
+    }, (item) => item.operation !== "message.send");
   }, [network.isInternetReachable]);
 
   useEffect(() => {
@@ -59,9 +78,9 @@ export function AppProviders({ children }: PropsWithChildren) {
   };
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister, maxAge: QUERY_CACHE_MAX_AGE, buster: "mobile-api-v1" }}>
       <ThemeBoundary dark={isDark}>{locked ? <LockScreen unlock={unlock} /> : children}</ThemeBoundary>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 

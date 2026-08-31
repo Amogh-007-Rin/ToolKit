@@ -18,6 +18,18 @@ export async function sendAccountEmail(to: string, subject: string, actionUrl: s
   });
 }
 
+export async function sendAccountNotice(to: string, subject: string, message: string) {
+  const from = process.env.SMTP_FROM;
+  if (!from) throw new Error("SMTP_FROM is not configured");
+  await transport().sendMail({
+    from,
+    to,
+    subject,
+    text: message,
+    html: `<p>${message.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</p>`,
+  });
+}
+
 export function publicAppUrl(path: string, token: string) {
   const base = process.env.PUBLIC_APP_URL ?? "http://localhost:3000";
   const url = new URL(path, base);

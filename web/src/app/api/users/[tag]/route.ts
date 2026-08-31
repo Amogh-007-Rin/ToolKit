@@ -55,6 +55,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ tag: st
     resolveStoredUrl(user.image),
     resolveStoredUrl(user.banner),
   ]);
+  const posts = user.id === userId || user.showPosts ? await prisma.post.findMany({
+    where: { userId: user.id },
+    include: {
+      media: { orderBy: { order: "asc" } },
+      _count: { select: { likes: true, comments: true, saves: true } },
+      likes: { where: { userId }, select: { id: true } },
+      saves: { where: { userId }, select: { id: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  }) : [];
 
   return NextResponse.json({
     user: {
@@ -66,6 +77,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ tag: st
       following: Number(user.following),
       followedByMe: followedByMe !== null,
       isMe: user.id === userId,
+      posts: await Promise.all(posts.map(async (post) => ({
+        id: post.id,
+        caption: post.caption,
+        tags: post.tags,
+        createdAt: post.createdAt,
+        likeCount: post._count.likes,
+        commentCount: post._count.comments,
+        savedCount: post._count.saves,
+        likedByMe: post.likes.length > 0,
+        savedByMe: post.saves.length > 0,
+        author: { id: user.id, name: user.name, tag: user.tag, image },
+        media: await Promise.all(post.media.map(async (media) => ({ id: media.id, type: media.type, url: await resolveStoredUrl(media.url) }))),
+      }))),
     },
   });
 }

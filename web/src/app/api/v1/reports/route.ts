@@ -1,6 +1,7 @@
 import prisma from "@/db";
 import { apiError, apiJson } from "@/lib/apiResponse";
 import { requireUser } from "@/lib/authorization";
+import { idempotent } from "@/lib/idempotency";
 import { z } from "zod";
 
 const schema = z.object({
@@ -11,7 +12,7 @@ const schema = z.object({
   messageEvidence: z.object({ roomId: z.string().max(100), senderId: z.string().max(100), content: z.string().max(4000), createdAt: z.string().datetime() }).optional(),
 });
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const user = await requireUser();
   if (!user) return apiError(req, 401, "AUTH_EXPIRED", "Authentication required");
   const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -26,3 +27,5 @@ export async function POST(req: Request) {
   const report = await prisma.report.create({ data: { reporterId: user.id, targetType, targetId, reason: parsed.data.reason, description: parsed.data.description, evidence }, select: { id: true, status: true, createdAt: true } });
   return apiJson(req, { report }, 201);
 }
+
+export const POST = idempotent("reports.create", post);

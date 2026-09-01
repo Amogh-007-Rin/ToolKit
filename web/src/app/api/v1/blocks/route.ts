@@ -1,6 +1,7 @@
 import prisma from "@/db";
 import { apiError, apiJson } from "@/lib/apiResponse";
 import { getSessionUserId } from "@/lib/session";
+import { idempotent } from "@/lib/idempotency";
 
 export async function GET(req: Request) {
   const userId = await getSessionUserId();
@@ -8,7 +9,7 @@ export async function GET(req: Request) {
   return apiJson(req, { blocks: await prisma.block.findMany({ where: { blockerId: userId }, orderBy: { createdAt: "desc" } }) });
 }
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) return apiError(req, 401, "AUTH_EXPIRED", "Authentication required");
   const body = await req.json().catch(() => null) as { userId?: unknown } | null;
@@ -22,6 +23,8 @@ export async function POST(req: Request) {
   });
   return apiJson(req, { block }, 201);
 }
+
+export const POST = idempotent("blocks.create", post);
 
 export async function DELETE(req: Request) {
   const userId = await getSessionUserId();

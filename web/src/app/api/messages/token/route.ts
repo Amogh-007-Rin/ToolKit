@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createRealtimeTicket } from "@/lib/mobileAuth";
 import { getSessionUserId } from "@/lib/session";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const userId = await getSessionUserId();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

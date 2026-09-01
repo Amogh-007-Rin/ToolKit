@@ -315,4 +315,125 @@ mod tests {
             direct_room_id("user-a", "user-c")
         );
     }
+
+    async fn integration_pool() -> PgPool {
+        let url = std::env::var("TEST_DATABASE_URL")
+            .expect("TEST_DATABASE_URL must point to an isolated migrated PostgreSQL database");
+        let pool = connect(&url).await.unwrap();
+        migrate(&pool).await.unwrap();
+        pool
+    }
+
+    async fn insert_test_user(pool: &PgPool, id: &str) {
+        sqlx::query(r#"INSERT INTO public."User" (id,email,skills,"updatedAt") VALUES ($1,$2,ARRAY[]::TEXT[],NOW())"#)
+            .bind(id)
+            .bind(format!("{id}@integration.invalid"))
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires isolated TEST_DATABASE_URL with web migrations applied"]
+    async fn consumes_realtime_ticket_exactly_once() {
+        let pool = integration_pool().await;
+        let user_id = format!("test-user-{}", Uuid::new_v4());
+        let jti = Uuid::new_v4().to_string();
+        let jti_hash = hex::encode(Sha256::digest(jti.as_bytes()));
+        insert_test_user(&pool, &user_id).await;
+        sqlx::query(r#"INSERT INTO public."RealtimeTicket" (id,"userId","jtiHash","expiresAt") VALUES ($1,$2,$3,NOW()+INTERVAL '1 minute')"#)
+            .bind(Uuid::new_v4().to_string())
+            .bind(&user_id)
+            .bind(jti_hash)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        assert!(
+            consume_realtime_ticket(&pool, &jti, &user_id)
+                .await
+                .unwrap()
+        );
+        assert!(
+            !consume_realtime_ticket(&pool, &jti, &user_id)
+                .await
+                .unwrap()
+        );
+        sqlx::query(r#"DELETE FROM public."User" WHERE id=$1"#)
+            .bind(user_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires isolated TEST_DATABASE_URL with web migrations applied"]
+    async fn duplicate_message_creates_one_row_and_one_outbox_event() {
+        let pool = integration_pool().await;
+        let sender = format!("test-sender-{}", Uuid::new_v4());
+        let recipient = format!("test-recipient-{}", Uuid::new_v4());
+        insert_test_user(&pool, &sender).await;
+        insert_test_user(&pool, &recipient).await;
+        let room = find_or_create_direct_room(&pool, &sender, &recipient)
+            .await
+            .unwrap();
+        let client_id = format!("mutation-{}", Uuid::new_v4());
+
+        let (_, first_inserted) = insert_message(
+            &pool,
+            &Uuid::new_v4().to_string(),
+            &room.id,
+            &sender,
+            Some(&client_id),
+            "hello",
+            &[],
+        )
+        .await
+        .unwrap();
+        let (second, second_inserted) = insert_message(
+            &pool,
+            &Uuid::new_v4().to_string(),
+            &room.id,
+            &sender,
+            Some(&client_id),
+            "hello",
+            &[],
+        )
+        .await
+        .unwrap();
+        assert!(first_inserted);
+        assert!(!second_inserted);
+        let message_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM messages WHERE sender_id=$1 AND client_id=$2")
+                .bind(&sender)
+                .bind(&client_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        let outbox_count: i64 = sqlx::query_scalar(
+            r#"SELECT COUNT(*) FROM public."NotificationOutbox" WHERE "dedupeKey"=$1"#,
+        )
+        .bind(format!("message:{}", second.id))
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(message_count, 1);
+        assert_eq!(outbox_count, 1);
+
+        sqlx::query("DELETE FROM rooms WHERE id=$1")
+            .bind(&room.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(r#"DELETE FROM public."NotificationOutbox" WHERE "dedupeKey"=$1"#)
+            .bind(format!("message:{}", second.id))
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(r#"DELETE FROM public."User" WHERE id=ANY($1)"#)
+            .bind(vec![sender, recipient])
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
 }

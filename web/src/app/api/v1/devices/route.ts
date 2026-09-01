@@ -1,6 +1,7 @@
 import prisma from "@/db";
 import { apiError, apiJson } from "@/lib/apiResponse";
 import { getSessionUserId } from "@/lib/session";
+import { idempotent } from "@/lib/idempotency";
 import { z } from "zod";
 
 const deviceSchema = z.object({
@@ -10,7 +11,7 @@ const deviceSchema = z.object({
   locale: z.string().trim().min(2).max(20).default("en"),
 });
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) return apiError(req, 401, "AUTH_EXPIRED", "Authentication required");
   const parsed = deviceSchema.safeParse(await req.json().catch(() => null));
@@ -23,6 +24,8 @@ export async function POST(req: Request) {
   });
   return apiJson(req, { device }, 201);
 }
+
+export const POST = idempotent("devices.register", post);
 
 export async function DELETE(req: Request) {
   const userId = await getSessionUserId();

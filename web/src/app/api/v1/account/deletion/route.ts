@@ -3,10 +3,11 @@ import { apiError, apiJson } from "@/lib/apiResponse";
 import { requireUser } from "@/lib/authorization";
 import { revokeAllNativeSessions } from "@/lib/mobileAuth";
 import { sendAccountNotice } from "@/lib/mailer";
+import { idempotent } from "@/lib/idempotency";
 
 const RECOVERY_DAYS = 30;
 
-export async function POST(req: Request) {
+async function post(req: Request) {
   const user = await requireUser();
   if (!user) return apiError(req, 401, "AUTH_EXPIRED", "Authentication required");
   const scheduledAt = new Date(Date.now() + RECOVERY_DAYS * 86_400_000);
@@ -23,3 +24,5 @@ export async function POST(req: Request) {
   );
   return apiJson(req, { deletionScheduledAt: scheduledAt.toISOString(), recoveryDays: RECOVERY_DAYS });
 }
+
+export const POST = idempotent("account.deletion.schedule", post);

@@ -6,6 +6,7 @@ import { Camera, ChevronLeft, ChevronRight, FileImage, Images, X } from "lucide-
 import { useRef, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Screen } from "@/components/Screen";
+import { launchCamera, launchMediaLibrary } from "@/lib/mediaPicker";
 import { createPostWithQueuedMedia, LocalMedia } from "@/services/media";
 
 const MAX_MEDIA = 10;
@@ -19,8 +20,8 @@ export default function NewPostScreen() {
   const controller = useRef<AbortController | null>(null);
   const append = (next: LocalMedia[]) => setFiles((current) => [...current, ...next].slice(0, MAX_MEDIA));
   const fromAsset = (asset: ImagePicker.ImagePickerAsset): LocalMedia => ({ uri: asset.uri, mimeType: asset.mimeType ?? (asset.type === "video" ? "video/mp4" : "image/jpeg"), size: asset.fileSize ?? 1, name: asset.fileName ?? undefined });
-  const library = async () => { Alert.alert("Choose media", "ToolKit will access only the photos or videos you select.", [{ text: "Cancel", style: "cancel" }, { text: "Continue", onPress: () => void ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], quality: 0.8, allowsMultipleSelection: true, selectionLimit: MAX_MEDIA - files.length }).then((result) => { if (!result.canceled) append(result.assets.map(fromAsset)); }) }]); };
-  const camera = async () => { Alert.alert("Use camera", "The camera is used only to capture media for this post.", [{ text: "Cancel", style: "cancel" }, { text: "Continue", onPress: () => void ImagePicker.launchCameraAsync({ mediaTypes: ["images", "videos"], quality: 0.8 }).then((result) => { if (!result.canceled) append([fromAsset(result.assets[0])]); }) }]); };
+  const library = async () => { Alert.alert("Choose media", "ToolKit will access only the photos or videos you select.", [{ text: "Cancel", style: "cancel" }, { text: "Continue", onPress: () => void launchMediaLibrary({ mediaTypes: ["images", "videos"], quality: 0.8, allowsMultipleSelection: true, selectionLimit: MAX_MEDIA - files.length }).then((result) => { if (result && !result.canceled) append(result.assets.map(fromAsset)); }) }]); };
+  const camera = async () => { Alert.alert("Use camera", "The camera is used only to capture media for this post.", [{ text: "Cancel", style: "cancel" }, { text: "Continue", onPress: () => void launchCamera({ mediaTypes: ["images", "videos"], quality: 0.8 }).then((result) => { if (result && !result.canceled) append([fromAsset(result.assets[0])]); }) }]); };
   const document = async () => { const result = await DocumentPicker.getDocumentAsync({ type: ["image/*", "video/*"], copyToCacheDirectory: true, multiple: true }); if (!result.canceled) append(result.assets.map((asset) => ({ uri: asset.uri, mimeType: asset.mimeType ?? "application/octet-stream", size: asset.size ?? 1, name: asset.name }))); };
   const remove = (index: number) => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index));
   const move = (index: number, direction: -1 | 1) => setFiles((current) => { const target = index + direction; if (target < 0 || target >= current.length) return current; const next = [...current]; [next[index], next[target]] = [next[target], next[index]]; return next; });

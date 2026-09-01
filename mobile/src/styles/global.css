@@ -28,4 +28,28 @@
     --color-input: 37 37 37;
     --color-destructive: 255 107 107;
   }
+
+  .high-contrast {
+    --color-background: 255 255 255;
+    --color-foreground: 0 0 0;
+    --color-card: 255 255 255;
+    --color-muted: 240 240 240;
+    --color-muted-foreground: 55 55 55;
+    --color-primary: 190 20 30;
+    --color-border: 0 0 0;
+    --color-input: 245 245 245;
+    --color-destructive: 180 0 20;
+  }
+
+  .dark.high-contrast {
+    --color-background: 0 0 0;
+    --color-foreground: 255 255 255;
+    --color-card: 0 0 0;
+    --color-muted: 20 20 20;
+    --color-muted-foreground: 225 225 225;
+    --color-primary: 255 100 100;
+    --color-border: 255 255 255;
+    --color-input: 16 16 16;
+    --color-destructive: 255 120 120;
+  }
 }

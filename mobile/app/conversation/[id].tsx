@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as DocumentPicker from "expo-document-picker";
-import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams } from "expo-router";
 import { ImagePlus, Paperclip, Send, X } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
@@ -9,14 +8,16 @@ import { MediaViewer } from "@/components/MediaViewer";
 import { Screen } from "@/components/Screen";
 import { discardMutation, enqueueMutation, failMutation, queuedMutations, setMutationPayload } from "@/lib/offlineQueue";
 import { retryDelay } from "@/lib/retry";
+import { launchMediaLibrary } from "@/lib/mediaPicker";
 import { LocalMedia, uploadMedia } from "@/services/media";
 import { attachmentUrl, getMessages, getRooms, markRoomRead, MessageAttachment, MessageItem, realtimeUrl } from "@/services/messages";
 import { useSessionStore } from "@/store/session";
 
 interface PendingMessageBody { type: "sendMessage"; roomId: string; tempId: string; content: string; attachments: MessageAttachment[] }
 
-export default function ConversationScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+export function ConversationContent({ roomId }: { roomId?: string }) {
+  const params = useLocalSearchParams<{ id?: string }>();
+  const id = roomId ?? params.id ?? "";
   const userId = useSessionStore((state) => state.user?.id);
   const client = useQueryClient();
   const [draft, setDraft] = useState("");
@@ -54,7 +55,7 @@ export default function ConversationScreen() {
   }, [client, id, userId]);
 
   const updateDraft = (value: string) => { setDraft(value); if (socket.current?.readyState === WebSocket.OPEN) { socket.current.send(JSON.stringify({ type: "typingStart", roomId: id })); if (typingTimer.current) clearTimeout(typingTimer.current); typingTimer.current = setTimeout(() => socket.current?.send(JSON.stringify({ type: "typingStop", roomId: id })), 1_200); } };
-  const pickLibrary = async () => { const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], allowsMultipleSelection: true, selectionLimit: 10 - selected.length, quality: 0.8 }); if (!result.canceled) setSelected((current) => [...current, ...result.assets.map((asset) => ({ uri: asset.uri, mimeType: asset.mimeType ?? (asset.type === "video" ? "video/mp4" : "image/jpeg"), size: asset.fileSize ?? 1, name: asset.fileName ?? undefined }))].slice(0, 10)); };
+  const pickLibrary = async () => { const result = await launchMediaLibrary({ mediaTypes: ["images", "videos"], allowsMultipleSelection: true, selectionLimit: 10 - selected.length, quality: 0.8 }); if (result && !result.canceled) setSelected((current) => [...current, ...result.assets.map((asset) => ({ uri: asset.uri, mimeType: asset.mimeType ?? (asset.type === "video" ? "video/mp4" : "image/jpeg"), size: asset.fileSize ?? 1, name: asset.fileName ?? undefined }))].slice(0, 10)); };
   const pickFiles = async () => { const result = await DocumentPicker.getDocumentAsync({ type: ["image/*", "video/*"], multiple: true, copyToCacheDirectory: true }); if (!result.canceled) setSelected((current) => [...current, ...result.assets.map((asset) => ({ uri: asset.uri, mimeType: asset.mimeType ?? "application/octet-stream", size: asset.size ?? 1, name: asset.name }))].slice(0, 10)); };
   const chooseAttachment = () => Alert.alert("Attach media", "ToolKit accesses only media you select.", [{ text: "Photo library", onPress: () => void pickLibrary() }, { text: "Files", onPress: () => void pickFiles() }, { text: "Cancel", style: "cancel" }]);
   const send = async () => {
@@ -73,8 +74,12 @@ export default function ConversationScreen() {
   const allMessages = [...olderMessages, ...(messages.data?.messages ?? []), ...optimistic].filter((message, index, all) => all.findIndex((candidate) => candidate.id === message.id) === index);
   return <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}><Screen title={room?.name ?? "Conversation"} subtitle={presence}>{allMessages.map((message) => <View key={message.id} className={`max-w-[88%] gap-2 rounded-3xl px-3 py-3 ${message.senderId === userId ? "self-end bg-primary" : "self-start bg-card"}`}>{message.attachments.some((attachment) => attachment.url) ? <MediaViewer media={message.attachments.flatMap((attachment, index) => attachment.url ? [{ id: `${message.id}-${index}`, type: attachment.kind, url: attachment.url }] : [])} height={190} /> : null}{message.content ? <Text className={message.senderId === userId ? "px-1 text-white" : "px-1 text-foreground"}>{message.content}</Text> : null}{message.pending ? <Text className="px-1 text-xs text-white/70">Sending…</Text> : null}{message.failed ? <Text className="px-1 text-xs text-white/70">Open Offline activity to retry</Text> : null}</View>)}
     {selected.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">{selected.map((file, index) => <View key={`${file.uri}-${index}`} className="h-24 w-24 overflow-hidden rounded-2xl bg-card">{file.mimeType.startsWith("image/") ? <Image source={{ uri: file.uri }} className="h-full w-full" /> : <View className="flex-1 items-center justify-center"><Paperclip color="#ed4b4b" size={24} /></View>}<Pressable accessibilityLabel="Remove attachment" onPress={() => setSelected((items) => items.filter((_, itemIndex) => itemIndex !== index))} className="absolute right-1 top-1 h-8 w-8 items-center justify-center rounded-full bg-black/60"><X color="white" size={15} /></Pressable></View>)}</ScrollView> : null}
-    {uploadProgress !== null ? <View className="gap-2"><View className="h-2 overflow-hidden rounded-full bg-border"><View style={{ width: `${uploadProgress * 100}%` }} className="h-full bg-primary" /></View><Pressable onPress={() => uploadController.current?.abort()}><Text className="text-center text-destructive">Cancel attachment upload</Text></Pressable></View> : null}
-    <View className="flex-row items-end gap-2 rounded-3xl border border-border bg-card p-2"><Pressable accessibilityLabel="Attach media" onPress={chooseAttachment} className="h-12 w-12 items-center justify-center rounded-2xl bg-input"><ImagePlus color="#ed4b4b" size={20} /></Pressable><TextInput value={draft} onChangeText={updateDraft} multiline placeholder="Message…" className="max-h-28 min-h-12 flex-1 py-3 text-foreground" /><Pressable disabled={(!draft.trim() && !selected.length) || uploadProgress !== null} onPress={() => void send()} className="h-12 w-12 items-center justify-center rounded-2xl bg-primary disabled:opacity-40"><Send color="white" size={19} /></Pressable></View>
+    {uploadProgress !== null ? <View className="gap-2"><View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(uploadProgress * 100) }} className="h-2 overflow-hidden rounded-full bg-border"><View style={{ width: `${uploadProgress * 100}%` }} className="h-full bg-primary" /></View><Pressable accessibilityRole="button" accessibilityLabel="Cancel attachment upload" onPress={() => uploadController.current?.abort()}><Text className="text-center text-destructive">Cancel attachment upload</Text></Pressable></View> : null}
+    <View className="flex-row items-end gap-2 rounded-3xl border border-border bg-card p-2"><Pressable accessibilityRole="button" accessibilityLabel="Attach media" onPress={chooseAttachment} className="h-12 w-12 items-center justify-center rounded-2xl bg-input"><ImagePlus color="#ed4b4b" size={20} /></Pressable><TextInput accessibilityLabel="Message" value={draft} onChangeText={updateDraft} multiline placeholder="Message…" className="max-h-28 min-h-12 flex-1 py-3 text-foreground" /><Pressable accessibilityRole="button" accessibilityLabel="Send message" disabled={(!draft.trim() && !selected.length) || uploadProgress !== null} onPress={() => void send()} className="h-12 w-12 items-center justify-center rounded-2xl bg-primary disabled:opacity-40"><Send color="white" size={19} /></Pressable></View>
     {(messages.data?.messages.length ?? 0) >= 50 || olderMessages.length ? <Pressable disabled={loadingHistory || historyComplete} onPress={() => void loadEarlier()} className="min-h-11 items-center justify-center rounded-2xl bg-card disabled:opacity-50"><Text className="font-semibold text-primary">{historyComplete ? "Beginning of conversation" : loadingHistory ? "Loading…" : "Load earlier messages"}</Text></Pressable> : null}
   </Screen></KeyboardAvoidingView>;
+}
+
+export default function ConversationScreen() {
+  return <ConversationContent />;
 }

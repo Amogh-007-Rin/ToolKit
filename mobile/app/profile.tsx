@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import * as ImagePicker from "expo-image-picker";
 import { Camera, Share2, UserRound } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Image, Pressable, Share, Text, TextInput, View } from "react-native";
 import { Screen } from "@/components/Screen";
+import { launchCamera, launchMediaLibrary } from "@/lib/mediaPicker";
 import { LocalMedia, uploadMedia } from "@/services/media";
 import { getProfile, updateProfile } from "@/services/product";
 
@@ -20,8 +20,8 @@ export default function ProfileScreen() {
   const save = useMutation({ mutationFn: () => updateProfile({ name: form.name.trim(), tag: form.tag.trim() || null, bio: form.bio.trim(), role: form.role.trim(), location: form.location.trim(), skills: form.skills.split(",").map((value) => value.trim()).filter(Boolean).slice(0, 5), ...(image.key !== undefined ? { image: image.key } : {}), ...(banner.key !== undefined ? { banner: banner.key } : {}) }), onSuccess: () => { setEditing(false); void client.invalidateQueries({ queryKey: ["profile"] }); } });
   const user = profile.data?.user;
   const chooseMedia = (scope: "image" | "banner") => Alert.alert(scope === "image" ? "Profile photo" : "Profile banner", "ToolKit will access only the image you select.", [
-    { text: "Choose photo", onPress: () => void ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85, allowsEditing: true, aspect: scope === "image" ? [1, 1] : [3, 1] }).then((result) => { if (!result.canceled) void uploadSelection(scope, { uri: result.assets[0].uri, mimeType: result.assets[0].mimeType ?? "image/jpeg", size: result.assets[0].fileSize ?? 1, name: result.assets[0].fileName ?? undefined }); }) },
-    { text: "Take photo", onPress: () => void ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.85, allowsEditing: true, aspect: scope === "image" ? [1, 1] : [3, 1] }).then((result) => { if (!result.canceled) void uploadSelection(scope, { uri: result.assets[0].uri, mimeType: result.assets[0].mimeType ?? "image/jpeg", size: result.assets[0].fileSize ?? 1, name: result.assets[0].fileName ?? undefined }); }) },
+    { text: "Choose photo", onPress: () => void launchMediaLibrary({ mediaTypes: ["images"], quality: 0.85, allowsEditing: true, aspect: scope === "image" ? [1, 1] : [3, 1] }).then((result) => { if (result && !result.canceled) void uploadSelection(scope, { uri: result.assets[0].uri, mimeType: result.assets[0].mimeType ?? "image/jpeg", size: result.assets[0].fileSize ?? 1, name: result.assets[0].fileName ?? undefined }); }) },
+    { text: "Take photo", onPress: () => void launchCamera({ mediaTypes: ["images"], quality: 0.85, allowsEditing: true, aspect: scope === "image" ? [1, 1] : [3, 1] }).then((result) => { if (result && !result.canceled) void uploadSelection(scope, { uri: result.assets[0].uri, mimeType: result.assets[0].mimeType ?? "image/jpeg", size: result.assets[0].fileSize ?? 1, name: result.assets[0].fileName ?? undefined }); }) },
     { text: "Remove", style: "destructive", onPress: () => scope === "image" ? setImage({ preview: null, key: null }) : setBanner({ preview: null, key: null }) },
     { text: "Cancel", style: "cancel" },
   ]);

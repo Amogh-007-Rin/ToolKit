@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { Accessibility, Bookmark, ChevronRight, FileText, LifeBuoy, LogOut, Palette, RefreshCcw, ShieldCheck } from "lucide-react-native";
-import { Alert, Pressable, Switch, Text, View } from "react-native";
+import { Alert, Linking, Pressable, Switch, Text, View } from "react-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell } from "lucide-react-native";
@@ -38,7 +38,11 @@ export default function SettingsScreen() {
       if (enabled) await enablePushNotifications(); else await disablePushNotifications();
       updateNotifications.mutate({ pushEnabled: enabled });
     } catch (cause) {
-      Alert.alert("Notifications unavailable", cause instanceof Error ? cause.message : "Could not update notifications");
+      const message = cause instanceof Error ? cause.message : "Could not update notifications";
+      Alert.alert("Notifications unavailable", message, [
+        { text: "Cancel", style: "cancel" },
+        ...(message.includes("system settings") ? [{ text: "Open settings", onPress: () => void Linking.openSettings() }] : []),
+      ]);
     }
   };
   const changeAnalytics = async (enabled: boolean) => {

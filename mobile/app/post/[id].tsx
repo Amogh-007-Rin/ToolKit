@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as DocumentPicker from "expo-document-picker";
-import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { Bookmark, ChevronLeft, ChevronRight, FilePlus2, Heart, MessageCircle, MoreHorizontal, Send, X } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Screen } from "@/components/Screen";
+import { launchCamera, launchMediaLibrary } from "@/lib/mediaPicker";
 import { MediaViewer } from "@/components/MediaViewer";
 import { LocalMedia, uploadMedia } from "@/services/media";
 import { createComment, deleteComment, deletePost, getComments, getPost, togglePostLike, togglePostSave, updatePost } from "@/services/product";
@@ -47,8 +47,8 @@ export default function PostScreen() {
   };
   const appendFiles = (files: LocalMedia[]) => setEditMedia((current) => [...current, ...files.map((file) => ({ type: file.mimeType.startsWith("video/") ? "video" : "image", file }))].slice(0, MAX_MEDIA));
   const pickMedia = () => Alert.alert("Add media", "Choose where to select an image or video.", [
-    { text: "Photo library", onPress: () => void ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], allowsMultipleSelection: true, selectionLimit: MAX_MEDIA - editMedia.length, quality: 0.8 }).then((result) => { if (!result.canceled) appendFiles(result.assets.map((asset) => ({ uri: asset.uri, mimeType: asset.mimeType ?? (asset.type === "video" ? "video/mp4" : "image/jpeg"), size: asset.fileSize ?? 1, name: asset.fileName ?? undefined }))); }) },
-    { text: "Camera", onPress: () => void ImagePicker.launchCameraAsync({ mediaTypes: ["images", "videos"], quality: 0.8 }).then((result) => { if (!result.canceled) appendFiles(result.assets.map((asset) => ({ uri: asset.uri, mimeType: asset.mimeType ?? (asset.type === "video" ? "video/mp4" : "image/jpeg"), size: asset.fileSize ?? 1, name: asset.fileName ?? undefined }))); }) },
+    { text: "Photo library", onPress: () => void launchMediaLibrary({ mediaTypes: ["images", "videos"], allowsMultipleSelection: true, selectionLimit: MAX_MEDIA - editMedia.length, quality: 0.8 }).then((result) => { if (result && !result.canceled) appendFiles(result.assets.map((asset) => ({ uri: asset.uri, mimeType: asset.mimeType ?? (asset.type === "video" ? "video/mp4" : "image/jpeg"), size: asset.fileSize ?? 1, name: asset.fileName ?? undefined }))); }) },
+    { text: "Camera", onPress: () => void launchCamera({ mediaTypes: ["images", "videos"], quality: 0.8 }).then((result) => { if (result && !result.canceled) appendFiles(result.assets.map((asset) => ({ uri: asset.uri, mimeType: asset.mimeType ?? (asset.type === "video" ? "video/mp4" : "image/jpeg"), size: asset.fileSize ?? 1, name: asset.fileName ?? undefined }))); }) },
     { text: "Files", onPress: () => void DocumentPicker.getDocumentAsync({ type: ["image/*", "video/*"], multiple: true, copyToCacheDirectory: true }).then((result) => { if (!result.canceled) appendFiles(result.assets.map((asset) => ({ uri: asset.uri, mimeType: asset.mimeType ?? "image/jpeg", size: asset.size ?? 1, name: asset.name }))); }) },
     { text: "Cancel", style: "cancel" },
   ]);

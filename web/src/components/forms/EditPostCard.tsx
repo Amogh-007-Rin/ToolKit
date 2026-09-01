@@ -3,7 +3,7 @@
 import { useState, useRef, ChangeEvent } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ImageIcon, Video, X, Check, UploadCloud, AlignLeft, Hash, AlertCircle, Sparkles, GripVertical } from "lucide-react";
+import { ImageIcon, Video, X, Check, UploadCloud, AlignLeft, Hash, AlertCircle, GripVertical } from "lucide-react";
 import { uploadFile } from "@/services/media";
 import type { Post } from "@/types/posts";
 import Spinner from "@/components/ui/loaders/Spinner";

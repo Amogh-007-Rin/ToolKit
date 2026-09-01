@@ -13,7 +13,6 @@ import {
   MessageCircle,
   Bookmark,
   Send,
-  Sparkles,
 } from "lucide-react";
 import SpikesLoader from "@/components/ui/loaders/SpikesLoader";
 import type { Post, PostComment } from "@/types/posts";

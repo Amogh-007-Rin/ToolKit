@@ -1,0 +1,6 @@
+appId: ${TOOLKIT_APP_ID}
+name: Development deep-link routing smoke test
+---
+- launchApp
+- openLink: "toolkit://notifications"
+- assertVisible: "Notifications"

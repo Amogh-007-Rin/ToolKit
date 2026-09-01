@@ -1,0 +1,24 @@
+appId: ${TOOLKIT_APP_ID}
+name: Development authentication and navigation smoke test
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Everything in one place"
+- tapOn: "Skip"
+- assertVisible: "Welcome back"
+- tapOn:
+    text: "Email"
+- inputText: ${MAESTRO_EMAIL}
+- tapOn:
+    text: "Password"
+- inputText: ${MAESTRO_PASSWORD}
+- tapOn: "Sign in"
+- assertVisible: "Overview"
+- tapOn: "Tools"
+- assertVisible: "Collections"
+- tapOn: "AI Search"
+- assertVisible: "AI Search"
+- tapOn: "Messages"
+- assertVisible: "Messages"
+- tapOn: "Explore"
+- assertVisible: "Explore"

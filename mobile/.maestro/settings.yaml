@@ -1,0 +1,10 @@
+appId: ${TOOLKIT_APP_ID}
+name: Settings, offline activity, and account flows
+---
+- runFlow: flows/authenticated-setup.yaml
+- openLink: "toolkit://notifications"
+- assertVisible: "Notifications"
+- back
+- openLink: "toolkit://account/restore"
+- assertVisible: "Restore your account"
+- back

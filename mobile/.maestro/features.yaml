@@ -1,0 +1,27 @@
+appId: ${TOOLKIT_APP_ID}
+name: Core development feature flows
+---
+- runFlow: flows/authenticated-setup.yaml
+- tapOn: "Tools"
+- assertVisible: "My Collections"
+- tapOn: "Collection"
+- assertVisible: "New collection"
+- tapOn: "Collection title"
+- inputText: "Maestro development collection"
+- tapOn: "Description"
+- inputText: "Created by the development end-to-end flow"
+- tapOn: "Create"
+- assertVisible: "Maestro development collection"
+- tapOn: "Overview"
+- tapOn: "Create post"
+- assertVisible: "Create post"
+- back
+- tapOn: "AI Search"
+- assertVisible: "ToolKit AI"
+- tapOn: "Ask for a tool..."
+- inputText: "Recommend a coding assistant"
+- hideKeyboard
+- tapOn: "Messages"
+- assertVisible: "Messages"
+- tapOn: "Explore"
+- assertVisible: "Explore creators"

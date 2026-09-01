@@ -1,0 +1,15 @@
+appId: ${TOOLKIT_APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow:
+    when:
+      visible: "Everything in one place"
+    commands:
+      - tapOn: "Skip"
+- tapOn: "Email"
+- inputText: ${MAESTRO_EMAIL}
+- tapOn: "Password"
+- inputText: ${MAESTRO_PASSWORD}
+- tapOn: "Sign in"
+- assertVisible: "Overview"

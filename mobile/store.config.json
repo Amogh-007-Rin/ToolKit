@@ -1,0 +1,17 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "info": {
+      "en-GB": {
+        "title": "ToolKit",
+        "subtitle": "Discover tools that fit",
+        "description": "Discover the software creators use, organise your own collections, share posts, ask ToolKit AI for recommendations, and talk with other creators. ToolKit includes private controls for discoverability, notification previews, analytics, blocked accounts, data export, and account deletion.",
+        "keywords": ["tools", "software", "creators", "productivity", "collections", "AI"],
+        "marketingUrl": "https://toolkit.example",
+        "supportUrl": "https://toolkit.example/support",
+        "privacyPolicyUrl": "https://toolkit.example/policy",
+        "privacyChoicesUrl": "https://toolkit.example/account-deletion"
+      }
+    }
+  }
+}

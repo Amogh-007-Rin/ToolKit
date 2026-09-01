@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "api:generate": "openapi-typescript openapi.yaml -o src/generated/api-schema.ts",
     "api:check": "bun run api:generate && git diff --exit-code -- src/generated/api-schema.ts",
+    "test:e2e": "maestro test .maestro",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },

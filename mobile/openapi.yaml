@@ -5,6 +5,28 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /health:
+    get:
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: API and database are ready
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service, database, timestamp]
+                properties:
+                  status: { type: string, const: ready }
+                  service: { type: string }
+                  database: { type: string, const: ready }
+                  timestamp: { type: string, format: date-time }
+        '503':
+          description: A required development dependency is unavailable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
   /auth/login:
     post:
       operationId: login
@@ -180,6 +202,15 @@ paths:
     patch: { operationId: updateNotificationPreferences, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
   /media/presign:
     post: { operationId: presignMediaUpload, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /media/upload:
+    put:
+      operationId: uploadMedia
+      requestBody:
+        required: true
+        content: { application/octet-stream: { schema: { type: string, format: binary } } }
+      responses: { '200': { $ref: '#/components/responses/JsonResponse' } }
+  /media/file:
+    get: { operationId: downloadMedia, parameters: [{ in: query, name: key, required: true, schema: { type: string } }], responses: { '200': { description: Protected media bytes } } }
   /media/url:
     get: { operationId: refreshMediaUrl, parameters: [{ in: query, name: key, required: true, schema: { type: string } }], responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
   /settings/privacy:
@@ -189,6 +220,9 @@ paths:
     patch: { operationId: changePassword, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
   /settings/export:
     get: { operationId: exportAccountData, responses: { '200': { description: Account JSON export, content: { application/json: { schema: { $ref: '#/components/schemas/JsonObject' } } } } } }
+  /settings/consents:
+    get: { operationId: listConsents, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+    post: { operationId: recordConsent, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
   /blocks:
     get: { operationId: listBlocks, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
     post: { operationId: blockUser, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '201': { $ref: '#/components/responses/JsonResponse' } } }
@@ -201,6 +235,15 @@ paths:
     get: { operationId: listMessageContacts, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
   /messages/unread:
     get: { operationId: getMessageUnreadCount, responses: { '200': { $ref: '#/components/responses/JsonResponse' } } }
+  /moderation/reports:
+    get:
+      operationId: listModerationReports
+      parameters:
+        - { in: query, name: status, schema: { type: string, enum: [OPEN, REVIEWING, ACTIONED, DISMISSED, APPEALED] } }
+      responses: { '200': { $ref: '#/components/responses/JsonResponse' }, '403': { $ref: '#/components/responses/ForbiddenError' } }
+  /moderation/reports/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    patch: { operationId: moderateReport, requestBody: { $ref: '#/components/requestBodies/JsonBody' }, responses: { '200': { $ref: '#/components/responses/JsonResponse' }, '403': { $ref: '#/components/responses/ForbiddenError' } } }
 components:
   parameters:
     Id: { in: path, name: id, required: true, schema: { type: string } }
@@ -267,6 +310,11 @@ components:
           schema: { $ref: '#/components/schemas/ApiError' }
     RateLimitError:
       description: Too many requests
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    ForbiddenError:
+      description: The authenticated account lacks the required role
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ApiError' }

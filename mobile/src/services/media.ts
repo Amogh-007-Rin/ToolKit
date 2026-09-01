@@ -4,6 +4,7 @@ import { useSessionStore } from "@/store/session";
 import * as FileSystem from "expo-file-system/legacy";
 import { clientId } from "@/lib/ids";
 import { discardMutation, enqueueMutation, failMutation, QueuedMutation } from "@/lib/offlineQueue";
+import type { OperationResult } from "@/generated/contract-types";
 
 export interface LocalMedia { uri: string; mimeType: string; size: number; name?: string }
 export interface UploadedMedia { key: string; kind: "image" | "video" }
@@ -49,7 +50,7 @@ export async function createPostWithQueuedMedia(files: LocalMedia[], caption: st
 }
 
 export async function uploadMedia(file: LocalMedia, scope: "post" | "chat" | "profile" | "banner", onProgress: (value: number) => void, roomId?: string, signal?: AbortSignal): Promise<UploadedMedia> {
-  const presigned = await api<{ key: string; kind: "image" | "video"; uploadUrl: string }>("/media/presign", { method: "POST", body: JSON.stringify({ scope, roomId, contentType: file.mimeType, size: file.size }) });
+  const presigned = await api<OperationResult<"presignMediaUpload", { key: string; kind: "image" | "video"; uploadUrl: string }>>("/media/presign", { method: "POST", body: JSON.stringify({ scope, roomId, contentType: file.mimeType, size: file.size }) });
   const blob = await fetch(file.uri).then((response) => response.blob());
   await new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest(); xhr.open("PUT", new URL(presigned.uploadUrl, config.serverUrl).toString()); xhr.setRequestHeader("Content-Type", file.mimeType); const token = useSessionStore.getState().accessToken; if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);

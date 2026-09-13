@@ -219,4 +219,34 @@ mod tests {
         let token = encrypt(secret, serde_json::json!({ "sub": "user-sub" }));
         assert!(verify_token(&token, secret).is_err());
     }
+
+    #[test]
+    fn verifies_signed_tickets_and_keeps_audiences_separate() {
+        let secret = "test-secret-for-signed-messaging-tokens";
+        let sign = |audience: &str, scope: &str| {
+            jsonwebtoken::encode(
+                &jsonwebtoken::Header::new(Algorithm::HS256),
+                &serde_json::json!({
+                    "sub": "test-user",
+                    "iss": "toolkit-web",
+                    "aud": audience,
+                    "scope": scope,
+                    "jti": "one-use-ticket",
+                    "exp": now_plus(60),
+                }),
+                &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
+            )
+            .unwrap()
+        };
+        let ticket = sign("toolkit-realtime", "realtime:connect");
+        let claims = verify_realtime_ticket(&ticket, secret).unwrap();
+        assert_eq!(user_id_from_claims(&claims).as_deref(), Some("test-user"));
+        assert!(verify_token(&ticket, secret).is_err());
+        assert!(verify_realtime_ticket(&ticket, "wrong-secret").is_err());
+        assert!(verify_realtime_ticket(&sign("toolkit-realtime", "wrong-scope"), secret).is_err());
+
+        let access = sign("toolkit-api", "");
+        assert!(verify_token(&access, secret).is_ok());
+        assert!(verify_realtime_ticket(&access, secret).is_err());
+    }
 }

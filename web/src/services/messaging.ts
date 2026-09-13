@@ -106,19 +106,20 @@ class ApiError extends Error {
   }
 }
 
-let cachedToken: { value: string; at: number } | null = null;
-
-export async function getAuthToken(force = false): Promise<string> {
-  if (!force && cachedToken && Date.now() - cachedToken.at < 5 * 60_000) {
-    return cachedToken.value;
-  }
+export async function getAuthToken(): Promise<string> {
   const res = await fetch("/api/messages/token", { cache: "no-store" });
   if (!res.ok) {
     throw new ApiError(res.status, "Unauthorized");
   }
   const { token } = (await res.json()) as { token: string };
-  cachedToken = { value: token, at: Date.now() };
   return token;
+}
+
+export async function getRealtimeTicket(): Promise<string> {
+  const res = await fetch("/api/v1/realtime/ticket", { method: "POST", cache: "no-store" });
+  if (!res.ok) throw new ApiError(res.status, "Could not connect to messaging");
+  const { ticket } = (await res.json()) as { ticket: string };
+  return ticket;
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -135,9 +136,6 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    if (res.status === 401) {
-      cachedToken = null;
-    }
     throw new ApiError(res.status, text || `Request failed with status ${res.status}`);
   }
   return res.json() as Promise<T>;
@@ -206,7 +204,7 @@ export class MessagingSocket {
     }
     this.setStatus("connecting");
     try {
-      const token = await getAuthToken();
+      const token = await getRealtimeTicket();
       if (epoch !== this.epoch) {
         return;
       }

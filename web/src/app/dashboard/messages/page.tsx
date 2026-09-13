@@ -275,7 +275,7 @@ function MessagesApp() {
   }, [meId]);
 
   useEffect(() => {
-    if (!userParam || lastHandledUserRef.current === userParam) {
+    if (!meId || !userParam || lastHandledUserRef.current === userParam) {
       return;
     }
     lastHandledUserRef.current = userParam;
@@ -286,13 +286,14 @@ function MessagesApp() {
         const { rooms: next } = await listRooms();
         setRooms(next);
         setActiveRoomId(room.id);
+        setError(null);
         router.replace(`/dashboard/messages?room=${room.id}`);
       } catch {
         setError("Could not start this conversation");
       }
     }
     open();
-  }, [userParam, router]);
+  }, [meId, userParam, router]);
 
   const sendMessage = useCallback(
     (content: string, attachments: OutgoingMedia[]) => {
@@ -378,6 +379,11 @@ function MessagesApp() {
 
   return (
     <div className="message-page relative flex h-full min-h-0 w-full gap-2 overflow-hidden rounded-[2rem] bg-background/35 p-1 md:gap-3">
+      {error && !activeRoomId ? (
+        <p role="alert" className="absolute inset-x-3 top-3 z-10 rounded-xl bg-card px-4 py-3 text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
       <RoomList
         rooms={rooms}
         contacts={contacts}

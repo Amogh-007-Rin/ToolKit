@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const tauriDevHost = process.env.TAURI_DEV_HOST;
+
 interface S3RemotePattern {
   protocol: "http" | "https";
   hostname: string;
@@ -47,6 +49,7 @@ function s3UsesPrivateNetwork(): boolean {
 }
 
 const nextConfig: NextConfig = {
+  ...(tauriDevHost ? { assetPrefix: `http://${tauriDevHost}:3000` } : {}),
   async rewrites() {
     return [
       {

@@ -16,6 +16,28 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Desktop development
+
+The desktop client uses this Next.js application as its frontend through Tauri.
+Run it from this directory with:
+
+```bash
+bun run tauri:dev
+```
+
+The Tauri development window connects to the normal Next.js development server,
+so the existing server-backed API routes and rewrites remain available.
+
+For release packaging, point Tauri at the deployed Next.js client (which keeps
+the existing server APIs available):
+
+```bash
+TAURI_FRONTEND_URL=https://your-toolkit-host.example bun run tauri:build
+```
+
+The URL is embedded as the Tauri frontend target; no API routes are copied into
+the desktop binary.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
